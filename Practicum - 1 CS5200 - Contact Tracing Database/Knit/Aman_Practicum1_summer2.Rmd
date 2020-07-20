@@ -2,11 +2,11 @@
 title: "PRACTICUM-1 SUBMISSION"
 author: "Aman Batra"
 output:
-  html_document:
-    df_print: paged
+  pdf_document: default
   word_document: default
   html_notebook: default
-  pdf_document: default
+  html_document:
+    df_print: paged
 ---
 <style type="text/css">
 
@@ -410,7 +410,6 @@ AuthorityID=>Jurisdiction<br>
 -   No Partial Dependency or Multivalued Attribute exist in this relationship
 -   There is no non-trivial FD without a candidate key. Hence table is in BCNF
 
-***
 
 7
 
