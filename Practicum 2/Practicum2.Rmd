@@ -1,0 +1,2281 @@
+---
+title: "PRACTICUM-II"
+author: "Aman Batra"
+output:
+  html_document:
+    code_folding: show
+    df_print: paged
+  pdf_document: default
+  html_notebook: default
+  word_document: default
+---
+
+```{r, setup, include=FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE, # show warnings
+  message = TRUE, # show messages
+  error = TRUE, # do not interrupt generation in case of errors,
+  echo = TRUE  # show R code
+)
+
+```
+<style type="text/css">
+
+h1.title {
+  font-size: 38px;
+  color: DarkRed;
+  text-align: center;
+    font-weight: bold;
+
+}
+h4.author {
+    font-size: 28px;
+  color: DarkRed;
+  text-align: center;
+    font-weight: bold;
+
+}
+</style>
+
+```{r include=FALSE}
+requiredPackages = c('plyr','RMySQL','DBI','data.table','pool','ggpubr' )
+for(p in requiredPackages){
+  if(!require(p,character.only = TRUE)) install.packages(p)
+  library(p,character.only = TRUE)
+}
+library(plyr)
+library(RMySQL)
+library(DBI)
+library(pool)
+library(ggpubr)
+library(data.table)
+
+```
+
+
+<h3>**Contact Tracing System for Epidemiologists and Epidemiological Research - PART 2**</h3>
+<br/>  
+<br/>  
+<br/>  
+<br/>  
+<br/>  
+<br/>  
+<br/>  
+<br/>  
+<br/>  
+
+<h3>**Aman Batra**</h3>
+
+
+<h4>
+**NUID: 001877232**<br/>
+**Class: CS5200**<br/>
+**Academic Term: Summer-2, 2020**<br/>
+**Instructor: Dr. Martin Schedlbauer**<br/>
+**Email** : [Batra.am@northeastern.edu](mailto:Batra.am@northeastern.edu)<br/>
+**Type : Individual Submission**<br/>
+**GITHUB Repository:** [Click Here](https://github.com/predictbay/amancs5200/tree/master/Practicum%20-%201%20CS5200%20-%20Contact%20Tracing%20Database)
+
+</h4>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+
+
+# INDEX : { .tabset }
+
+<br/>
+<br/>
+
+1.    Create **at least one view** to help abstract a complex query. The view must be based on at least two tables and **involve a join or subquery**.
+2.    Perform a query **using the view** created in (1). 
+3.    Implement **CRUD** operations for one data object. Create a function for each data object in R and use it to **CRUD an object**. Build similar functions for the other CRUD operations.
+4.    Build a trigger to manage **data integrity**, e.g., a cardinality constraint, a multiplicity constraint, or a data constraint. Show that the trigger works.
+5.    Build a trigger to keep a **derived attribute** up to date. Show that the trigger works.
+6.    Build a **stored procedure** to implement an **update** to the database; the update must involve multiple tables.
+7.    Add **transaction** logic to support CRUD operations that span multiple table. Create new CRUD operations or revise the functions developed in (3). You may also create the **transaction logic in stored procedures** rather than in R functions.
+8.    View the query plan for two alternatives of the same query. **Compare the plan** for the two queries and **comment on the differences** and how you would choose one versus another.
+9.    Add an index for a **non-key attribute** used in one of the queries in (8) and redo (8) to see new performance and query plan.
+
+<br/>
+<br/>
+<br/>
+
+
+```{r}
+conn = dbConnect(MySQL(), userName="root", password="atcbtra123", dbname="ContactTracingDB", host="localhost",port = 3306)
+
+# dbClearResult(dbListResults(conn)[[1]])
+# us the above command in case of pending rows
+```
+<br/>
+<br/>
+
+
+
+## TASK 1 
+
+<h3> Create at least one view to help abstract a complex query. The view must be based on at least two tables and involve a join or subquery. </h3>
+
+***
+
+### Solution: 
+
+<br/>
+
+ <h4>The View below lists out all the events that all the users have attended in the past, For Example. If a user visited 13 different places, and interacted with 25 other people, all the interactions will be shown in the view below.</h4>
+
+<br/>
+
+**Tables** : Interactions, Visits, Person, UserEvents,Place
+
+**Total Joins** : 5
+
+**Total Unions** : 1
+
+***
+
+```{r}
+dbSendQuery(conn,"/* A View of all the interactions and visits of every person in the database */
+CREATE or Replace VIEW person_contact_history as 
+/* A union query to list out all the visits and interactions of everyone*/
+SELECT 
+  'Interaction' as EventType, 
+  i.interactinguserid as UserID, 
+  i.visitorid as VisitorID, 
+  i.interactionplaceid as PlaceID, 
+  p.firstname as FirstPersonName, 
+  v.firstname as VisitorName, 
+  u.eventid as EventID, 
+  u.eventstarttime as Start_Time, 
+  u.eventendtime as End_time, 
+  u.description 
+FROM 
+  Interactions i, 
+  userevents u, 
+  person p, 
+  person v 
+WHERE 
+  i.interactionid = u.eventid 
+  AND i.InteractingUserID = p.personid 
+  AND i.VisitorID = v.personid 
+UNION ALL 
+SELECT 
+  'Visit', 
+  v.visitinguserid, 
+  ' ', 
+  v.visitplaceid, 
+  k.firstname as First_Person_Name, 
+  '  ', 
+  CONCAT('v', u.eventid) as EventID, 
+  u.eventstarttime, 
+  u.eventendtime, 
+  u.description 
+FROM 
+  visit v, 
+  userevents u, 
+  person k 
+WHERE 
+  v.visitid = u.eventid 
+  AND v.visitinguserid = k.personid 
+ORDER by 
+  UserID ASC;")
+
+
+res <- dbSendQuery(conn,"SELECT * FROM person_contact_history;")
+df1 <- dbFetch(res,n = -1)
+
+df1
+
+```
+<br/>
+<br/>
+<br/>
+<br/>
+ 
+ <h4> [Back To Top](#) </h4>
+  
+## TASK 2
+
+<h3>Perform a query using the view created in (1).</h3> 
+
+***
+
+### Solution:
+
+<h4> From the view generated in Task 1, we select interactions, and decide the threat level of each interaction on the basis of total duration of that interaction. For example. An interaction lasting less than an hour is termed low risk, whereas an interaction lasting more than 12 hours is termed very high risk.___</h4>
+
+***
+
+```{r}
+res <- dbSendQuery(conn,"/* Query to quanitfy risk of infection in terms of total interaction time between two persons, only the interactions are selected visits are omitted*/
+select 
+FirstPersonName, 
+VisitorName, 
+EventID,
+UserID as FirstPersonID,
+VisitorID as SecondPersonID,
+TIMEDIFF(end_time,start_time) as MeetingDuration_hhmmss,
+CASE
+WHEN TIMEDIFF(end_time,start_time) >='12:00:00'  THEN 'Very High Risk of Infection'
+WHEN TIMEDIFF(end_time,start_time) > '01:00:00' 
+AND TIMEDIFF(end_time,start_time) < '04:00:00' THEN 'Moderate Risk of Infection'
+WHEN TIMEDIFF(end_time,start_time) >= '04:00:00' 
+AND TIMEDIFF(end_time,start_time) <'12:00:00' THEN 'High Risk of Infection'
+Else 'Low Risk of Infection'
+END AS InteractionThreat
+from 
+ContactTracingDb.person_contact_history
+where
+EventType='Interaction';")
+
+df2 <- dbFetch(res, n=-1)
+df2
+```
+
+<br/>
+<br/>
+ 
+
+ 
+<h4> [Back To Top](#) </h4>
+ 
+ 
+## TASK 3 { .tabset }
+
+***
+
+<h4>Implementing **CRUD** operations for one data object.</h4>
+
+***
+
+### CREATE
+
+<h4> Create operation </h4>
+
+<br/>
+
+####  Tables involved in the operation
+
+<br/>
+We will create a function to insert values in the following data table
+
+
+![](https://amanbatra.in/static/img3/clip_image037.png)
+
+<br/>
+
+#### Create for Single row insert
+
+
+```{r}
+# Inserting single row values into Place table using function and variables
+
+
+CreateNewPlace <- function(placename,streetarea,state,city,zip,latitude,longitude)
+  {
+  query <-paste("INSERT INTO Place(placename,streetarea,state,city,zip,latitude,longitude) VALUES('",placename,"','",streetarea,"','",state,"','",city,"','",zip,"','",latitude,"','",longitude,"');",sep='')
+dbSendQuery(conn,query)
+
+}
+
+CreateNewPlace("4564","Valley View Drive","MA","Boston","02115",41.143423,71.123212)
+
+# Checking output of the query
+df30<-dbGetQuery(conn,'SELECT * FROM PLACE WHERE placename="4564"')
+df30
+
+
+```
+
+
+<br/>
+
+#### Create for Multiple Rows Insert
+
+
+```{r}
+# Inserting multiple row values into Place table using function with dbwrite, vectors and a dataframe 
+
+CreateMultipleNewPlace <- function(placedataframe)
+  {
+  dbSendQuery(conn, "SET GLOBAL local_infile = 1;")
+  dbWriteTable(conn,"place",
+               placedataframe, 
+               field.types = NULL,
+               row.names = FALSE,
+               overwrite = FALSE,
+               append = TRUE,
+               allow.keywords=FALSE)
+  
+  dbSendQuery(conn, "SET GLOBAL local_infile = 0;")
+}
+
+
+
+#create data frame for input
+
+places <- data.frame("placeid"=c(1005,1006,1007,1008),
+                     "placename"=c("12280","16038","94408","94408"), 
+                     "streetarea"=c("518-540 Atlantic Ave","169-189 Columbus Ave","260-262 Medford St","260-262 Medford St"),
+                     "state"=c("MA","MA","MA","MA"),
+                     "city"=c("Hyde Park","Hyde Park","Hyde Park","South Boston"),
+                     zip=c("2136","2136","2136","2137"),
+                     "latitude"=c(84.4285,24.1782,86.1167,87.5593),
+                     "longitude"=c(54.4484,27.2619,39.3794,58.9647))
+
+
+
+# Call the function on the created data frame.
+CreateMultipleNewPlace(places)
+
+# Checking output of the query
+res<-dbSendQuery(conn,"SELECT * FROM PLACE WHERE placeid in(1005,1006,1007,1008);")
+df31<-dbFetch(res, -1)
+df31
+```
+
+
+### READ
+<br/>
+<br/>
+
+<h4>Read Operation</h4>
+<br/>
+
+#### Tables involved in the read operation:
+
+Main table
+<br/>
+
+![](https://amanbatra.in/static/img3/clip_image037.png)
+<br/>
+
+Other Table
+
+!["AppUser"](https://amanbatra.in/static/img3/clip_image007.png)
+(A derived field healthstatus is not shown in this diagram)
+
+<br/>
+
+#### Code for READ operation
+
+We will create a function to find out the address of a given appuser  who tested covid positive recently by passing their phone number as arguments to the place object.
+
+
+```{r}
+
+AddressDetails <- function(fetchlocationdata)
+  {
+  
+query <-paste("SELECT p.placeid, p.placename , p.city , p.state ,p.zip, p.latitude, p.longitude
+from place p
+inner join appuser a on p.placeid=a.addressid
+inner join person k on k.PersonID=a.UserID
+inner join personphone pk where pk.personid=k.PersonID
+and (pk.phoneno='",fetchlocationdata[1],"' );",sep='')
+
+res <- dbSendQuery(conn,query)
+df32 <- dbFetch(res, n=-1)
+df32
+
+}
+
+# declaring out vector
+
+newfetch<-c('(198) 647-4883')
+
+# calling the function
+
+AddressDetails(newfetch)
+
+
+```
+
+
+
+
+### UPDATE
+
+<br/>
+<h4>Update Operation</h4>
+<br/>
+
+Code for updating a zipcode of particular record in the place object.
+
+<br/>
+
+```{r}
+
+UpdateZipCode  <- function(placeid,newzip)
+  {
+  
+  q2 <-paste("SELECT placeid, zip as 'old zip code' from place where placeid='",placeid,"';",sep='')
+res <- dbSendQuery(conn,q2)
+df36 <- dbFetch(res, n=-1)
+print(df36)
+  
+query <-paste("UPDATE place SET zip ='",newzip,"' 
+              where PlaceID='",placeid,"';",sep='')
+res <- dbSendQuery(conn,query)
+df35 <- dbFetch(res, n=-1)
+df35
+
+q3 <-paste("SELECT placeid, zip as 'updated zip code' from place where zip ='",newzip,"' 
+             AND placeid='",placeid,"';",sep='')
+res <- dbSendQuery(conn,q3)
+df36 <- dbFetch(res, n=-1)
+df36
+}
+
+# calling the function
+
+UpdateZipCode('500','2137')
+
+
+```
+
+
+### DELETE
+<br/>
+<br/>
+
+<h4> Delete Operation </h4>
+
+<br/>
+
+A function to search and expunge certain records from place table by matching a combination of streetname and postal codes(zip), the input will be passed via a vector, to the function.
+
+<br/>
+
+#### Table involved in the delete operation
+<br/>
+
+![](https://amanbatra.in/static/img3/clip_image037.png)
+
+<br/>
+
+#### Code for deleting an old addresses via matching streetname and pincode
+
+```{r}
+
+# Assigning value to our vector
+streetzip <- c("540 Atlantic Ave","2136")
+
+# Checking output tables before deletion
+q22<-paste("Select * from place where streetarea like '%",streetzip[1],"%' AND zip=",streetzip[2],";",sep='')
+res <- dbSendQuery(conn,q22)
+df38 <- dbFetch(res, n=-1)
+df38
+
+# Declaring our main function for delete operation
+
+DeleteByStreetZip  <- function(streetzip)
+  {
+query <-paste("DELETE from Place where streetarea like
+              '%",streetzip[1],"%' AND zip=",streetzip[2],";",sep='')
+res <- dbSendQuery(conn,query)
+df39 <- dbFetch(res, n=-1)
+}
+
+# calling the function
+
+DeleteByStreetZip(streetzip)
+
+# Checking the table after delete operation
+
+q23<-paste("Select * from place where streetarea like '%",streetzip[1],"%' AND zip=",streetzip[2],";",sep='')
+res <- dbSendQuery(conn,q23)
+df40 <- dbFetch(res, n=-1)
+df40
+
+```
+
+
+<br/>
+<br/>
+<br/>
+
+ <br>
+
+<h4> [Back To Top](#) </h4>
+
+
+## TASK 4
+
+<br/>
+<h4>Build a trigger to manage data integrity, e.g., a cardinality constraint, a multiplicity constraint, or a data constraint.</h4>
+<br/>
+
+***
+
+### Solutions:
+<br/>
+
+
+<h4> Building a trigger to enforce the generalization between our three tables UserEvents, Interactions and Visit</h4>
+
+<br/>
+
+If a parent class has only two child classes, then we can a triggers to each child class, So class C1 checks the primary keys of Class C2, and vice versa. But if there are more than two child classes, our complexity will increase, and we will need more triggers and frequent modification. A better approach is to declare a flag variable in the parent class P, set this boolean variable to TRUE for every record, when a child class is assigned to that record.
+
+
+**Parent Table >> UserEvents**
+Each user event is either a visit or an interaction but not both. An event which is neither 
+
+**Child Tables >> Interactions, Visit**
+No Interactions or Visit instances can have the same primary key. ie.. Primary key column of Visit can not have any values that are present in the primary key column of Interactions, and vice versa.
+
+<br/>
+
+#### STEPS
+
+
+1. Creating a separate checking table **(Not Audit Table)** ChkUserEventUniqueness for UserEvents class, to keep a track of generalization. We can do this by adding a column to the existing table also, but since I want my code to be scalable, I will create a separate table.
+
+***
+
+```{r}
+# Note: the delimiter statement is not fully compatible with R - so we will implement it directly via MySQL and attach the screenshots
+
+# Creating the audit trail table ChkUserEventUniqueness
+dbSendQuery(conn,"drop table ChkUserEventUniqueness;")
+dbSendQuery(conn,"CREATE TABLE IF NOT EXISTS ChkUserEventUniqueness (
+  usereventid INTEGER NOT NULL, 
+  usage_flag BOOLEAN NOT NULL DEFAULT 0,
+  ins_timestamp datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (usereventid)
+);")
+```
+
+<br/>
+
+2. Creating an Insert, Update trigger on UserEvents, and generating userflags in ChkUserEventUniqueness,the update Trigger will generate a boolean Flag variable <usage_flag> in the checking table ChkUserEventUniqueness, whenever an interaction or visit linked to a UserEvent is changed. 
+
+<br/>
+
+#### Trigger Set 1 - For Parent Class UserEvents
+
+***
+
+```{r}
+
+#Creating trigger to set flags in ChkUserEventUniqueness when new userevents are inserted
+dbSendQuery(conn,"DROP TRIGGER IF EXISTS UserEventFlagGeneration;")
+dbSendQuery(conn,"CREATE TRIGGER UserEventFlagGeneration 
+AFTER INSERT ON UserEvents FOR EACH ROW BEGIN 
+  DELETE FROM ChkUserEventUniqueness WHERE usereventid=NEW.eventid;
+  INSERT INTO ChkUserEventUniqueness VALUES(NEW.eventid, 0,CURRENT_TIMESTAMP);
+END;")
+
+#Creating trigger to adjust flags in ChkUserEventUniqueness when userevents are updated
+dbSendQuery(conn,"DROP TRIGGER IF EXISTS UserEventUpdation;")
+
+dbSendQuery(conn,"CREATE TRIGGER UserEventUpdation AFTER UPDATE ON UserEvents
+FOR EACH ROW BEGIN
+IF New.eventid not in (SELECT usereventid from ChkUserEventUniqueness) then
+INSERT INTO ChkUserEventUniqueness VALUES(NEW.eventid, 0,CURRENT_TIMESTAMP);
+END IF;
+END;"
+)
+
+```
+
+
+3. Creating Triggers in child classes visits and interactions to check or generate the boolean Flag <usage_flag> in our checking table ChkUserEventUniqueness, If the flag is FALSE, we proceed with our insert operation in the selected child class, and set flag = 1, BUT if flag is TRUE, that means our key field has already been used in another child class, in this case we raise an exception.
+
+<br/>
+<br/>
+
+
+#### Trigger Set 2 - For Child Class **Interactions**
+
+***
+
+```{r}
+#Creating trigger to check if flag=1 after inserting values in interactions (child class of userevents)
+dbSendQuery(conn,"DROP TRIGGER IF EXISTS InteractionFlagCheck;")
+dbSendQuery(conn,"CREATE TRIGGER InteractionFlagCheck AFTER INSERT ON Interactions FOR EACH ROW
+BEGIN  DECLARE excep varchar(255);
+IF NEW.interactionid IN (SELECT usereventid from ChkUserEventUniqueness WHERE usage_flag = 1) THEN 
+set  excep = concat (
+    'Insertion not accepted, event can be either interaction or visit, not both:  ', 
+    cast(new.interactionid as char)
+  );
+signal sqlstate '45000' set message_text = excep;
+ELSE 
+UPDATE ChkUserEventUniqueness 
+SET usage_flag = 1 
+WHERE usereventid = NEW.Interactionid;
+END IF;
+END;"
+  )
+
+#Creating trigger to adjust flag after updating values in interactions (child class of userevents)
+dbSendQuery(conn,"DROP TRIGGER IF EXISTS  InteractionUpdation;")
+dbSendQuery(conn,"CREATE TRIGGER InteractionUpdation AFTER UPDATE ON Interactions FOR EACH ROW
+BEGIN 
+IF OLD.interactionid NOT  IN (SELECT usereventid from ChkUserEventUniqueness WHERE usage_flag=1 ) THEN 
+UPDATE ChkUserEventUniqueness 
+SET  usage_flag = 1
+WHERE usereventid = OLD.Interactionid;
+END IF;
+END;")
+
+#Creating trigger to reset flag=1 to flag=0 after deleting values from interactions (child class of userevents)
+
+dbSendQuery(conn,"DROP TRIGGER IF EXISTS  InteractionDeletion;")
+dbSendQuery(conn,"CREATE TRIGGER InteractionDeletion AFTER DELETE ON Interactions FOR EACH ROW
+BEGIN 
+IF OLD.interactionid IN (SELECT usereventid from ChkUserEventUniqueness WHERE usage_flag = 1) THEN 
+UPDATE ChkUserEventUniqueness 
+SET  usage_flag = 0
+WHERE usereventid = OLD.Interactionid;
+END IF;
+END;")
+
+
+
+```
+
+<br/>
+
+#### Trigger Set 3 - For Child Class **Visit**
+
+***
+
+```{r}
+#Creating trigger to check if flag=1 after inserting values in visit (child class of userevents)
+dbSendQuery(conn,"DROP TRIGGER IF EXISTS VisitFlagCheck;")
+dbSendQuery(conn,"CREATE TRIGGER VisitFlagCheck AFTER INSERT ON Visit FOR EACH ROW 
+BEGIN DECLARE excep varchar(255);
+IF NEW.visitid IN (SELECT usereventid from ChkUserEventUniqueness WHERE usage_flag = 1) THEN 
+set excep = concat ('Insertion not accepted, event can be either interaction or visit, not both: ', 
+cast(new.visitid as char)
+  );
+signal sqlstate '45000' set message_text = excep;
+ELSE 
+UPDATE ChkUserEventUniqueness 
+SET  usage_flag = 1 
+WHERE usereventid = NEW.visitid;
+  END IF;
+END;")
+
+#Creating trigger to adjust flag after updating values in visit (child class of userevents)
+dbSendQuery(conn,"DROP TRIGGER IF EXISTS  VisitUpdation;")
+dbSendQuery(conn,"CREATE TRIGGER VisitUpdation AFTER UPDATE ON Visit FOR EACH ROW
+BEGIN 
+IF OLD.visitid NOT  IN (SELECT usereventid from ChkUserEventUniqueness WHERE usage_flag=1 ) THEN 
+UPDATE ChkUserEventUniqueness 
+SET  usage_flag = 1
+WHERE usereventid = OLD.visitid;
+END IF;
+END;")
+
+#Creating trigger to reset flag=1 to flag=0 after deleting values from visit (child class of userevents)
+dbSendQuery(conn,"DROP TRIGGER IF EXISTS  VisitDeletion;")
+dbSendQuery(conn,"CREATE TRIGGER VisitDeletion AFTER DELETE ON Visit FOR EACH ROW
+BEGIN 
+IF OLD.visitid IN (SELECT usereventid from ChkUserEventUniqueness WHERE usage_flag = 1) THEN 
+UPDATE ChkUserEventUniqueness 
+SET  usage_flag = 0
+WHERE usereventid = OLD.visitid;
+END IF;
+END;")
+```
+
+<br/>
+<br/>
+
+#### Output Screenshot:
+
+
+<br/>
+!["Creating Tables and Triggers"](https://amanbatra.in/static/img3/TriggersDeclare.png)
+<br/>
+
+
+#### Test Set1
+
+<br/>
+
+```{r}
+# TESTING OUR Audit Tables to verify cardinality /multiplicity constrains:
+# Constraint 1 - if 2101 is primary key for a Userevent, which becomes a foreign key for interaction, then it cannot be the FK for visit or any other child.
+# Constraint 2 - if 2102 is primary key for a Userevent, which becomes foreign key for visit, then it cannot be the FK for interaction or any other child.
+
+# Test Set1
+dbSendQuery(conn,"INSERT into UserEvents values(2107, current_timestamp, current_timestamp+1, 1208, 'A visit to landscape ground');")
+dbSendQuery(conn,"INSERT into Interactions values(2107,1058, 1111, 76);")
+dbSendQuery(conn,"INSERT into visit values(2107,156,1255);")
+```
+
+
+##### Test Results for Test Set 1
+
+
+```{r}
+#Test Results for Test Set 1
+dbGetQuery(conn,"SELECT * from UserEvents WHERE eventid=2107;")
+dbGetQuery(conn,"SELECT * from visit WHERE visitid=2107;")
+dbGetQuery(conn,"SELECT * from interactions WHERE interactionid=2107;")
+
+```
+
+
+##### Test Set 2
+
+
+```{r}
+#Test Set2
+dbSendQuery(conn,"INSERT into UserEvents values(2115, current_timestamp, current_timestamp+1, 1170, 'The Catholic Cemetery');")
+dbSendQuery(conn,"INSERT into visit values(2115,196,1455);")
+dbSendQuery(conn,"INSERT into Interactions values(2115,1058, 1111, 76);")
+```
+
+
+##### Test Results for Test Set 2
+
+
+```{r}
+#Test Results for Test Set2
+dbGetQuery(conn,"SELECT * from UserEvents WHERE eventid=2115;")
+dbGetQuery(conn,"SELECT * from visit WHERE visitid=2115;")
+dbGetQuery(conn,"SELECT * from interactions WHERE interactionid=2115;")
+
+```
+
+
+#### Output Screenshot from MySQL:
+
+<br/>
+!["Creating Tables and Triggers"](https://amanbatra.in/static/img3/Test1.png)
+
+
+<br/>
+<br/>
+<br/>
+<br/>
+
+ <br/>
+ 
+
+
+<h4> [Back To Top](#) </h4>
+ 
+ 
+## TASK 5 
+
+<h4> Build a trigger to keep a derived attribute up to date. Show that the trigger works. </h4>
+
+***
+### Solution : {.tabset}
+
+#### Trigger 5.1 
+
+
+<h4> Calculating the derived attribute age for the class AppUser, using two triggers one for insert and one for update, adding a separate column which says age in the AppUser table. We can create a virtual column, or a permanent one too. </h4>
+
+***
+
+```{r}
+
+#dbSendQuery(conn,"ALTER TABLE AppUser ADD Column Age VARCHAR(50) AFTER Birthdate;")
+
+dbSendQuery(conn,"DROP TRIGGER IF EXISTS calculate_user_age;")
+dbSendQuery(conn,"CREATE DEFINER=root@localhost TRIGGER calculate_user_age
+BEFORE INSERT ON AppUser
+FOR EACH ROW
+BEGIN
+IF NEW.UserID is NOT NULL 
+THEN
+Set New.Age = YEAR(CURRENT_TIMESTAMP) - YEAR(NEW.Birthdate) 
+- (RIGHT(CURRENT_TIMESTAMP, 5) < RIGHT(NEW.Birthdate, 5));
+END IF;
+END;")
+
+
+dbSendQuery(conn,"DROP TRIGGER IF EXISTS update_user_age;")
+dbSendQuery(conn,"CREATE DEFINER=root@localhost TRIGGER update_user_age
+BEFORE UPDATE ON AppUser
+FOR EACH ROW
+BEGIN
+IF NEW.UserID is NOT NULL 
+THEN
+SET New.Age = YEAR(CURRENT_TIMESTAMP) - YEAR(NEW.Birthdate) 
+- (RIGHT(CURRENT_TIMESTAMP, 5) < RIGHT(NEW.Birthdate, 5));
+END IF;
+END;")
+
+
+```
+
+
+
+##### Testing trigger 5.1 by displaying the out after adding a value 
+
+
+```{r}
+dbSendQuery(conn,"insert into person(personid,firstname,lastname) values(1700,'Aman','Batra');")
+dbSendQuery(conn,"insert into appuser(userid,birthdate,addressid) values(1700,'1966-12-12',455);")
+
+res<-dbSendQuery(conn, "select UserID,Birthdate,Age,AddressID from appuser where userid=1700;")
+df11<-dbFetch(res,n=-1)
+df11
+```
+
+
+<br/>
+
+
+#### Trigger 5.2
+
+***
+<br/>
+
+##### A Trigger to automatically derive attributes such as Description of Exposure Event, Exposure Date and Threat Severity Level for **Notifications** class
+
+<br/>
+
+***
+```{r}
+# The TRIGGER CODE below is more like a hybrid of a trigger and a stores procedure,Cursors are usually used in stored procedure, but I wanted to test them inside triggers to generates the attributes ExposureEvent, ExposureDate and ThreatLevel
+# Every time a notification is created for notifying the exposed contact of a person
+# The trigger is fired whenever a notification is linked to a person and all his exposure details are updated accordingly
+
+dbSendQuery(conn,"DROP TRIGGER If exists derive_notifications_attributes;")
+
+dbSendQuery(conn,"CREATE TRIGGER derive_notifications_attributes
+AFTER INSERT on personnotification for each row
+BEGIN
+  DECLARE sttime, ettime datetime;
+  DECLARE suspected boolean;
+  DECLARE testres text;
+  DECLARE pid, eid integer;
+  DECLARE create_notification_cursor CURSOR for 
+  SELECT p.personid, i.interactionid, u.eventstarttime,u.eventendtime, h.testresult, a.covidsuspected
+from person p, interactions i, healthreportcheck h, assessment a, userevents u
+where p.personid = i.interactinguserid
+and i.interactionid = u.eventid and h.userid = i.visitorid
+and a.takerid = i.visitorid  and p.personid = NEW.PersonID;
+
+OPEN create_notification_cursor;
+FETCH from create_notification_cursor INTO pid, eid, sttime, ettime, testres, suspected;
+if testres = 'positive' 
+then update notifications set 
+ExposureEvent=CONCAT('Met a covid positive person for', timediff(sttime,ettime)),
+ ExposureDate = CAST(sttime as DATE),
+ threatLevel='high'
+ where nid= NEW.nid;
+ 
+elseif suspected=1 and (testres='negative' or testres='unclear')  
+then update notifications set 
+ExposureEvent=CONCAT('Met a covid suspected person for', timediff(sttime,ettime)),
+ ExposureDate = CAST(sttime as DATE),
+ threatLevel='medium'
+ where nid= NEW.nid;
+ 
+end if;
+close create_notification_cursor;
+END;")
+```
+
+
+
+##### Testing Trigger 5.2 with insert statements
+
+<br/>
+```{r}
+
+# Deleting old values to test again
+dbSendQuery(conn,"delete from PersonNotification where nid = 132123;")
+dbSendQuery(conn,"delete from notifications where nid = 132123;")
+
+#generating a new notification for the user 1007
+dbSendQuery(conn,"insert into Notifications(Nid, PHAAuthorityID,timeStamp,OtherInformation) values(132123,13110, current_timestamp,'please contact us asap on 321123123');")
+dbSendQuery(conn,"insert into PersonNotification values(132123,1007);")
+
+#We can see the three derived attributes: ExposureEvent, ExposureDate and threatLevel below:
+dbGetQuery(conn,"select * from notifications where nid = 132123")
+```
+
+
+<br/>
+<br/>
+<br/>
+
+ <br/>
+ 
+<h4> [Back To Top](#) </h4>
+
+## TASK 6 
+
+<h4>Build a stored procedure to implement an update to the database; the update must involve multiple tables
+</h4>
+<br/>
+
+***
+
+### Solution: {.tabset}
+In task 6 we will build two stored procedures linked with multi-tables, to perform regular updates on our database
+
+#### Stored Procedure 6.1 
+
+1. Stored Procedure 6.1 is a continuation of TASK 4. In Task 4 we created two triggers to enforce {0,1} multiplicity on child classes Interactions and Visit, of Parent Class UserEvents. But we also need to make sure that a UserEvent class is always classified either as an Interaction or a visit. Hence, we need to clean up all the unassigned UserEvents; now this could be achieved by either transactions or stored procedures
+
+- HERE, we define a stored procedure to delete all entries in UserEvents that are unassigned to any child, and are older than 1 hour i.e.. a UserEvent that was added an hour ago, and hasn't been referenced by Visit class OR Interactions class, will be deleted if this procedure is called now.
+
+- We can call this procedure inside a trigger or schedule using events in mysql. I Will try to use an event for this particular trigger
+
+***
+```{r}
+
+# CREATE Procedure delete_unlinked_userevents without any special parameters
+dbSendQuery(conn,"DROP PROCEDURE IF EXISTS delete_unlinked_userevents;")
+dbSendQuery(conn,"CREATE DEFINER=root@localhost PROCEDURE delete_unlinked_userevents()
+  BEGIN
+  DECLARE flagvar boolean;
+  DECLARE timevar datetime;
+  DECLARE eid,finished integer DEFAULT 0;
+  DECLARE cleanup_userevent_cursor CURSOR for 
+  SELECT u.eventid, c.usage_flag, c.ins_timestamp FROM UserEvents u
+  JOIN ChkUserEventUniqueness c on c.usereventid=u.eventid;
+  DECLARE CONTINUE HANDLER FOR NOT FOUND SET finished = 1;
+OPEN cleanup_userevent_cursor;
+cleanup_userevent_loop : LOOP
+		FETCH from cleanup_userevent_cursor into eid,flagvar,timevar;
+		IF finished=0 AND flagvar=0 AND  timevar < now() - interval 1 HOUR
+        THEN DELETE From UserEvents WHERE EventID=eid;
+        DELETE from ChkUserEventUniqueness WHERE usereventid=eid;
+		ELSEIF finished=1 THEN LEAVE cleanup_userevent_loop;
+        END IF;
+END LOOP cleanup_userevent_loop;
+CLOSE cleanup_userevent_cursor;
+  END;"
+  )
+
+```
+
+```{r}
+# Insert dummy data test
+
+
+dbSendQuery(conn,"insert into userevents VALUES(2222,CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,1477, 'an old unused event');")
+
+dbSendQuery(conn," UPDATE ChkUserEventUniqueness
+SET ins_timestamp='2020-07-27 01:42:45'
+WHERE usereventid=2222;")
+
+# Checking if data exists before procedure call
+xd=dbGetQuery(conn,"select * from userevents where eventid=2222")
+xd
+
+# Calling the procedure manually here for testing, we can schedule it or link it to some trigger later
+
+dbSendQuery(conn,"CALL delete_unlinked_userevents();")
+
+# checking the output after procedure call
+x6=dbGetQuery(conn,"select * from userevents where eventid=2222")
+x6
+```
+
+
+
+
+#### Stored Procedure 6.2
+
+
+
+
+2. Stored Procedure 6.2 - A Procedure to GENERATE HealthStatus of an AppUser, using data from multiple tables
+
+
+The stored procedure given below generates or updates the healthstatus attribute of all the user whenever called, the procedure spans multiple tables, git athers data from a join of tables : AppUser,HealthReportCheck, AssessmentID, and using the defined logic it assigns a health status to a user such as 'infected', 'suspected' or 'healthy' 
+
+***
+
+```{r}
+
+# The stored procedure given below can be called inside any trigger, or scheduled in a event to autogenerate healthstatus of an AppUser
+
+
+dbSendQuery(conn,"DROP procedure IF EXISTS GenerateHealthAndExposureStatus;")
+dbSendQuery(conn,"CREATE procedure GenerateHealthAndExposureStatus()
+BEGIN
+DECLARE useridp integer;
+DECLARE reportresult text;
+DECLARE assessresult bool;
+DECLARE finished INTEGER DEFAULT 0;
+
+Declare health_status_cursor CURSOR for 
+Select a.userid,h.TestResult, i.CovidSuspected from appuser a
+JOIN healthreportcheck h on h.UserID=a.userid
+JOIN assessment i on i.TakerID=h.UserID;
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET finished = 1;
+
+OPEN health_status_cursor;
+setHealthStatus : LOOP
+		FETCH from health_status_cursor into useridp,reportresult,assessresult;
+		IF finished=0 AND reportresult='positive'
+        THEN UPDATE AppUser
+        SET HealthStatus = 'infected' WHERE UserID=useridp;
+        ELSEIF  finished=0 AND (reportresult='negative' or reportresult='unclear') 
+        AND assessresult = 1
+        THEN UPDATE AppUser
+        SET HealthStatus = 'suspected' WHERE UserID=useridp;
+        ELSEIF finished=0 AND reportresult='negative' 
+        AND assessresult=0 
+        THEN UPDATE AppUser
+        SET HealthStatus = 'healthy' WHERE UserID=useridp;
+		ELSEIF finished=1 THEN 
+        LEAVE setHealthStatus;
+        END IF;
+END LOOP setHealthStatus;
+CLOSE health_status_cursor;
+END;")
+
+
+```
+
+```{r}
+
+# We will test out procedure by calling it and then viewing the appusers table:
+
+dbSendQuery(conn,"CALL GenerateHealthAndExposureStatus();")
+
+res<-dbSendQuery(conn,"select userid,age,healthstatus from appuser;")
+df10 = dbFetch(res,n=-1)
+df10
+```
+
+<br/>
+
+<br/>
+
+
+<h4> [Back To Top](#) </h4>
+
+
+
+## TASK 7 {.tabset}
+
+ <h4> CRUD Transactions </h4>
+
+### CREATE 
+
+Transaction - Implementing generalization between Person, AppUser and PublicHealthWorker
+
+This purpose of this transaction is to aid the implementation of a special kind of relationship - Generalization, where a child cannot exist without a parent and vice versa, so it creates the classic problem of circular dependenncy in the database. i.e.. The primary key of parent is the foreign key of child and primary key of child is the foreign key of parent. I cannot add either one of the table individually, without a combined insert. In task 4, we disabled the foreign key constraints and manually ensured the uniqueness of a child object by using triggers variable, but that approach is better for batch jobs, like checking the table or updating the table. For general user, we will use transactions as follows:
+
+- To make sure no that no one is able to  delete a parent or child object using MySQL queries like "DELETE FROM AppUser WHERE UserID is not null", I have enforced circular dependency during the initial table creation, by making nullable Foreign Keys to each child table
+
+- SO Every Person is either an AppUser or a PublicHealthWorker, If we insert both the child and parent together i.e.. Person and either a AppUser or a PublicHealthWorker, then only we could ensure that each record in person table is related to exactly one table in exactly one child table, for this we create a transaction that performs combined insert on both tables.
+
+- If, for some reason the create transaction fails, any changes made will be rolled back, hence ensuring no incomplete input. 
+- In this transaction the values for Parent table and the child tables of choice are will be passed as data frames and the choice of which child table to insert into is determined by the "typeofchild" argument in the function. 
+
+***
+
+#### Tables involved in this transaction:
+
+!["Person"](https://amanbatra.in/static/img3/clip_image011.png)
+
+!["AppUser"](https://amanbatra.in/static/img3/clip_image007.png)
+
+!["PublicHealthWorker](https://amanbatra.in/static/img3/clip_image022.png)
+
+#### Code for CREATE Transaction
+
+***
+
+```{r}
+
+
+CreatePerson <- function(ParentFrame, ChildFrame, typeofchild)
+{
+  tryCatch(  
+  expr = {
+dbBegin(conn)
+dbSendQuery(conn,"SET GLOBAL local_infile=1;")  
+dbSendQuery(conn,"SET FOREIGN_KEY_CHECKS=0;")
+dbWriteTable(
+  conn,
+  "person",
+  ParentFrame,
+  field.types = NULL,
+  row.names = FALSE,
+  overwrite = FALSE,
+  append = TRUE,
+  allow.keywords = FALSE
+)
+
+if(typeofchild == "appuser")
+{
+  dbWriteTable(
+  conn,
+  "appuser",
+  ChildFrame,
+  field.types = NULL,
+  row.names = FALSE,
+  overwrite = FALSE,
+  append = TRUE,
+  allow.keywords = FALSE
+)
+
+  query1 <- paste("SELECT * FROM Person WHERE PersonID = ",ParentFrame["PersonID"],";", sep='')
+  value1 <- dbGetQuery(conn,query1)
+   query2 <- paste("SELECT * FROM AppUser WHERE UserID = ",ChildFrame["UserID"],";", sep='')
+  value2 <- dbGetQuery(conn,query2)
+  
+  if(length(value1$PersonID)>0&&length(value2$UserID)>0&&ParentFrame["PersonID"]==ChildFrame["UserID"]){
+
+     print("Commit succeeded...")
+dbCommit(conn) }
+  else
+  {
+    print("Transaction failed.. Rolling Back")
+    dbRollback(conn)
+  }  
+  
+}
+else if (typeofchild =="healthworker")
+{
+    dbWriteTable(
+  conn,
+  "PublicHealthWorker",
+  ChildFrame,
+  field.types = NULL,
+  row.names = FALSE,
+  overwrite = FALSE,
+  append = TRUE,
+  allow.keywords = FALSE
+)
+  
+  query3 <- paste("SELECT * FROM Person WHERE PersonID = ",ParentFrame["PersonID"],";", sep='')
+  value3 <- dbGetQuery(conn,query3)
+   query4 <- paste("SELECT * FROM PublicHealthWorker WHERE WorkerID = ",ChildFrame["WorkerID"],";", sep='')
+  value4 <- dbGetQuery(conn,query4)
+  value4
+  
+  if(length(value3$PersonID)>0&&length(value4$WorkerID)>0&&ParentFrame["PersonID"]==ChildFrame["WorkerID"]){
+      dbCommit(conn)
+         print("Commit succeeded...")
+
+         }
+  else
+  {
+    print("Transaction failed.. Rolling Back")
+    dbRollback(conn)
+  }
+}
+
+}, error = function(e)
+{
+ print("Transaction failed...rolling back")
+   print(e)
+}
+)
+if(dbCommit(conn)==TRUE)
+{
+   print("Transaction Status : Completed")
+
+}
+else
+{
+  print("Transaction failed.. Rolling Back")
+  dbRollback(conn)
+
+   
+}
+  
+  dbSendQuery(conn,"SET GLOBAL local_infile=0;")
+  dbSendQuery(conn,"SET FOREIGN_KEY_CHECKS=1;")
+
+}
+
+
+#Data Frame test insert on AppUser
+
+Person1 <- data.frame("PersonID" = 3000, "firstName" = "Jake", "lastName" = "Peralta")
+AppUser1 <- data.frame("UserID" = 3000, "Birthdate" = "1984-12-21", "addressid" = "432", "recoveredfromcovid" = 0)
+
+#Data Frame test insert on PublicHealthWorker
+
+Person2 <- data.frame("PersonID" = 3001, "firstName" = "Amy", "lastName" = "Santiago")
+PublicHealthWorker2 <- data.frame("WorkerID" = 3001, "title" = "Doctor","OfficeID"="X28h1", "PublicAuthID"=13105)
+
+
+# Calling the function to perform insert
+CreatePerson(Person1,AppUser1,"appuser")
+
+CreatePerson(Person2,PublicHealthWorker2,"healthworker")
+
+
+
+```
+
+
+#### Output for create transaction, and other tests
+
+```{r}
+df40 = dbGetQuery(conn, 'SELECT * from Person,AppUser WHERE Person.PersonID = AppUser.UserID and Person.PersonID=3000;')
+df40
+df41 = dbGetQuery(conn, 'SELECT * from Person,PublicHealthWorker WHERE Person.PersonID = PublicHealthWorker.WorkerID and Person.PersonID=3001;')
+df41
+```
+
+
+##### Test 1 - Testing if insert works WITHOUT transaction
+
+
+```{r}
+
+dbSendQuery(conn,'INSERT into AppUser(UserID,Birthdate,AddressID,RecoveredFromCovid) VALUES(3005,"1986-12-12",423,1);' )
+
+```
+Hence we can conclude that manual insert fails without a unless both parent and child are added together
+
+
+##### Test 2 - checking if transaction rollsback properly after some failure
+
+
+```{r}
+
+Person2 <- data.frame("PersonID" = 3300, "firstName" = "Raymond", "lastName" = "Holt")
+# Intentionally passing different 
+
+AppUser2 <- data.frame("UserID" = 3033, "Birthdate" = "1984-12-21", "addressid" = "432", "recoveredfromcovid" = 1)
+
+# Passing the arguments to function
+
+
+CreatePerson(Person2,AppUser2,"appuser")
+
+# observing the output for both child and parent, to see if roll back was successful
+
+df43 = dbGetQuery(conn, 'SELECT * from Person,AppUser WHERE Person.PersonID = AppUser.UserID and Person.PersonID=3300;')
+df43
+df44 = dbGetQuery(conn, 'SELECT * from Person,PublicHealthWorker WHERE Person.PersonID = PublicHealthWorker.WorkerID and Person.PersonID=3033;')
+df44
+
+```
+
+We can see that no values were added to the database after rollback, hence our rollback was successful
+
+
+
+### READ 
+
+
+#### Transaction for Querying a very dynamic database
+
+In my contacttracingdb there is a visit table which is link between an appuser and a place, whenever an appuser visits a place a new visit is created, so if we have a userbase of 10 million active appusers, the number of visit will even while we are query, so the output of a query may change while querying from multiple tables, because every seconds so many new visits can be added, so in such cases the database admin often prefers the use of READ transaction in dynamic databases. Also, if the number of concurrent users are very large, they might be peforming concurrent read, write operations, so the data we fetched can be manipulated meanwhile, and our query results might be inconsistent, here also we will have to use read transactions.
+
+MY GOAL here is to get the current number of COVID positive or COVID suspected users, in a given area, where we can filter out the cases by age. The output will show the count of users per street from a given zipcode. Our transaction will have three parameters passed via a dataframe:
+1. Zipcode of the place.
+2. Looking for - 'infected' or 'suspected' or 'both'
+3. Filter by Age - Min and Max
+
+***
+
+#### Tables involved in this transaction:
+
+!["AppUser"](https://amanbatra.in/static/img3/clip_image007.png)
+
+![](https://amanbatra.in/static/img3/clip_image037.png)
+
+![](https://amanbatra.in/static/img3/clip_image047.png)
+
+
+
+#### Code for CREATE Transaction:
+
+***
+
+```{r}
+
+# We will first check if our inputs and their respective combinations exist in the tables or not, if they exist, then we retrive the statistics from our current db instance.
+
+
+GetZipStatistics <- function(zipinput)
+{
+  tryCatch(  
+  expr = {
+  dbBegin(conn)
+    
+query1 <- paste("SELECT count(appuser.UserID) as TotalCount, place.zip, place.streetarea FROM place,appuser,visit WHERE place.placeid = visit.visitplaceid and visit.visitinguserid=appuser.userid AND appuser.HealthStatus ='infected' AND place.zip = ",zipinput[1]," and appuser.age between ",zipinput[3]," AND ",zipinput[4]," GROUP By place.streetarea ORDER by totalcount DESC;", sep='')
+  value1 <- dbGetQuery(conn,query1)
+  
+query2 <- paste("SELECT count(appuser.UserID) as TotalCount, place.zip, place.streetarea FROM place,appuser,visit WHERE place.placeid = visit.visitplaceid and visit.visitinguserid=appuser.userid AND appuser.HealthStatus ='suspected' AND place.zip = ",zipinput[1]," and appuser.age between ",zipinput[3]," AND ",zipinput[4]," GROUP By place.streetarea  ORDER by totalcount DESC;", sep='')
+  value2 <- dbGetQuery(conn,query2)
+  
+query3 <- paste("SELECT count(appuser.UserID) as TotalCount, place.zip, place.streetarea FROM place,appuser,visit WHERE place.placeid = visit.visitplaceid and visit.visitinguserid=appuser.userid AND (appuser.HealthStatus ='suspected' or appuser.HealthStatus ='infected') AND place.zip = ",zipinput[1]," and appuser.age between ",zipinput[3]," AND ",zipinput[4]," GROUP By place.streetarea ORDER by totalcount DESC;", sep='')
+  value3 <- dbGetQuery(conn,query3)
+      
+  
+  
+    if(zipinput[2]=="infected"&&length(value1$TotalCount)>0)
+    { 
+  print(value1)
+  dbCommit(conn)
+  print("Commit Succeeded")
+    } 
+    else if(zipinput[2]=="suspected"&&length(value2$TotalCount)>0)
+      {
+      
+  print(value2)
+  dbCommit(conn)
+  print("Commit Succeeded")
+      
+    }  else if(zipinput[2]=="both"&&length(value3$TotalCount)>0)
+      {
+      
+  print(value3)
+  dbCommit(conn)
+  print("Commit Succeeded")
+    } 
+    else
+    {    print("Transaction failed...rolling back")
+    dbRollback(conn)
+    }
+}, error = function(e)
+{
+  print("Transaction failed...rolling back")
+  print(e)
+}
+)
+
+if(dbCommit(conn)==TRUE)
+{
+  print("Transaction Status: Closed")
+}
+else
+{
+  print("Transaction failed...rolling back")
+  dbRollback(conn)
+}
+}
+
+```
+
+
+#### Output for READ transaction, and other tests
+
+
+```{r}
+
+placedetails <- c('2748','both',0,100)
+GetZipStatistics(placedetails)
+
+
+```
+
+
+##### Test 1 - Testing if read works with incorrect values
+
+```{r}
+# Trying to read a value for zip which does not exist in the system
+placedetails1 <- c('27481','both',0,100)
+GetZipStatistics(placedetails1)
+
+
+# Testing try catch error block by inputting incorrect values:
+placedetails2 <- c('2748','both',0,"text")
+GetZipStatistics(placedetails2)
+
+```
+
+
+##### Test 2 - checking if transaction rollsback properly after some failure
+
+There is no need of rollback in read transactions: imagine a guy who inserts an update statement in the middle of our read transaction, and has to track down the implicit rollback that occurs after a read transaction and accidentally removes his data, but due to the limitations of DBI package by R, rollback is sometimes needed to prevent nested queries.
+
+
+
+### UPDATE
+
+
+#### Transaction for updating the current health status of an AppUser
+
+The current healthstatus of an appuser is defined by merging the results of his/her latest test reports. An asymptomatic user can still test positive for coronavirus. COVID-19 test reports are often not perfect, many a times there are errors and frequent updates to old patient files, they need to be updated promptly, for example if a patient  health check file said "test results unclear" in the morning, it can change to "test results positive" later.
+
+After making these updates in the HealthReportCheck table we need to update the healthstatus field of appuser, which combining the test result, and assessments, It uses some application logic to update this field. Hence this transaction comes useful for this, triggers and stored procedures can be processor heavy and may leave database in an inconsistent state when new changes are made to the db.  Transaction ensures that these update are made properly and they are correctly reflected in the healthstatus derived attribute of an appuser.
+
+Total field updated: two (healthreportcheck.testresult and appuser.heathstatus)
+Total tables spanned : two (healthreportcheck and appuser)
+
+***
+
+#### Tables involved in this transaction:
+
+![](https://amanbatra.in/static/img3/clip_image027.png)
+
+
+![](https://amanbatra.in/static/img3/clip_image024.png)
+
+!["AppUser"](https://amanbatra.in/static/img3/clip_image007.png)
+
+
+#### Code for CREATE Transaction:
+
+***
+
+```{r}
+# chrs vector is passed to the transaction to update the current test result status in HealthReportCheck field
+# chrs[1] indicates the healthreport number and chrs[2] indicates the current health status
+
+
+UpdateHealthStatus <- function(chrs)
+  
+{
+  tryCatch(  
+  expr = {
+vi<-c("positive","negative","unclear")
+
+query <- paste("SELECT reportID, TestResult, UserID FROM HealthReportCheck WHERE reportID =",chrs[1],";",sep='')
+
+value <- dbGetQuery(conn,query)
+    if(length(value$reportID)<=0&&(value$TestResult<=0)&& chrs[2] %in% vi){
+      print("Transaction failed...rolling back")
+      dbRollback(conn)
+    }
+    else{
+dbBegin(conn)
+  print("Report File Exists..Transaction will proceed")
+    if(chrs[2]=="positive")
+      {
+query3 <- paste("UPDATE AppUser SET HealthStatus='infected' WHERE UserID=",value$UserID,";",sep='')
+dbSendQuery(conn,query3)
+
+query4 <- paste("UPDATE HealthReportCheck SET TestResult = '",chrs[2],"' Where ReportID=",chrs[1],";",sep='')
+dbSendQuery(conn,query4)
+print("Updates Successful")
+
+dbCommit(conn)
+} 
+    else if(chrs[2]=="negative")
+    {
+      
+query5 <- paste("UPDATE AppUser SET HealthStatus ='healthy' WHERE UserID=",value$UserID,";",sep='')
+dbSendQuery(conn,query5)
+
+query6 <- paste("UPDATE HealthReportCheck SET TestResult = '",chrs[2],"' Where ReportID=",chrs[1],";",sep='')
+dbSendQuery(conn,query6)
+print("Updates Successful")
+
+dbCommit(conn)      
+    }
+      
+    else if(chrs[2]=="unclear")
+    {
+      
+query7 <- paste("UPDATE AppUser SET HealthStatus ='suspected' WHERE UserID=",value$UserID,";",sep='')
+dbSendQuery(conn,query7)
+
+query8 <- paste("UPDATE HealthReportCheck SET TestResult = '",chrs[2],"' Where ReportID=",chrs[1],";",sep='')
+dbSendQuery(conn,query8)
+print("Updates Successful")
+
+dbCommit(conn)      
+    }
+      
+else{
+  print("Transaction Failed ... Rolling Back")
+  dbRollback(conn)
+}
+}
+}, error = function(e)
+{
+  print("Transaction Failed ... Rolling Back")
+  print(e)
+ 
+}
+)
+
+if(dbCommit(conn)==TRUE)
+{
+print("Transaction Status: Closed")
+}
+else
+{
+  print("Transaction Failed ... Rolling Back")
+  dbRollback(conn)
+}
+}
+
+# creating test data for update transaction
+
+reportupdate<-c(95116,'negative')
+
+# calling the update transaction.
+
+UpdateHealthStatus(reportupdate)
+
+
+df50=dbGetQuery(conn,"SELECT reportID, testresult, UserID FROM HealthReportCheck WHERE reportID = 95116")
+df50
+df51=dbGetQuery(conn,"SELECT userID,healthstatus, age from appuser WHERE userid = 1017")
+df51
+
+```
+
+
+
+
+#### Output for create transaction, and other tests
+
+Checking tables before update:
+
+```{r}
+
+## we will try our transaction and observe both the tables before and after transaction
+
+df50=dbGetQuery(conn,"SELECT reportID, testresult, UserID FROM HealthReportCheck WHERE reportID = 95171")
+df50
+df51=dbGetQuery(conn,"SELECT userID,healthstatus, age from appuser WHERE userid = 1072")
+df51
+```
+
+Checking tables after update:
+
+```{r}
+# creating test data for new update transaction
+
+reportupdat<-c(95171,'positive')
+
+# calling the update transaction.
+
+UpdateHealthStatus(reportupdat)
+
+df50=dbGetQuery(conn,"SELECT reportID, testresult, UserID FROM HealthReportCheck WHERE reportID = 95171")
+df50
+df51=dbGetQuery(conn,"SELECT userID,healthstatus, age from appuser WHERE userid = 1072")
+df51
+
+
+```
+
+
+##### Test - checking if the transaction rollsback properly after some failure
+
+```{r}
+
+# checking values before rollback 
+df50=dbGetQuery(conn,"SELECT reportID, testresult, UserID FROM HealthReportCheck WHERE reportID = 95134")
+df50
+df51=dbGetQuery(conn,"SELECT userID,healthstatus, age from appuser WHERE userid = 1035")
+df51
+
+
+# creating test data for to check error handling and rollback transaction
+
+reportupd<-c(95134,'badvalue')
+
+# calling the update transaction.
+
+UpdateHealthStatus(reportupd)
+
+df50=dbGetQuery(conn,"SELECT reportID, testresult, UserID FROM HealthReportCheck WHERE reportID = 95134")
+df50
+df51=dbGetQuery(conn,"SELECT userID,healthstatus, age from appuser WHERE userid = 1035")
+df51
+```
+
+We can clearly see that rollback is working properly and our tables are unaffected
+
+
+
+
+### DELETE
+
+#### Transaction to implement cascading delete accross multiple tables, when a major key field like AppUser is deleted
+All the connected records from other tables: person, personphone, appuseremail, healthreporcheck, assessment, visits, userevents and contact log history be deleted.
+
+AppUser is child of 'person' table, visits, interactions and userevents are activity tables of appuser, assessment and reports are medical data of an appuser, and contactloghistory is the contact tracing log of that user.
+
+Delete transaction is often used, because so many tables are linked with foreign constraints, the entire web has to delete all directly related records to that particular record.
+
+
+Primary Delete: AppUser
+
+Deletes from related tables : person, personphone, appuseremail, healthreporcheck, assessment, visits, interactions, userevents and contactloghistory
+
+Total tables spanned : 10
+
+***
+
+```{r}
+
+# Checking existence of tables that will be deleted after this transaction
+
+x1=dbGetQuery(conn,"SELECT * FROM ContactHistoryLog WHERE LogID =1184")
+x2=dbGetQuery(conn,"SELECT * FROM UserEvents WHERE LogBookID =1184")
+x3=dbGetQuery(conn,"SELECT * FROM Interactions WHERE interactinguserid =1184")
+x4=dbGetQuery(conn,"SELECT * FROM visit WHERE visitinguserid =1184")
+x5=dbGetQuery(conn,"SELECT * FROM Assessment WHERE Takerid = 1184")
+x6=dbGetQuery(conn,"SELECT * FROM HealthReportCheck WHERE UserID =1184")
+x7=dbGetQuery(conn,"SELECT * FROM AppUser WHERE UserID =1184 ")
+x8=dbGetQuery(conn,"SELECT * FROM AppUserEmail WHERE UserID =1184 ")
+x9=dbGetQuery(conn,"SELECT * FROM Person WHERE PersonID = 1184")
+x10=dbGetQuery(conn,"SELECT * FROM personphone WHERE personid = 1184")
+x1 
+x2 
+x3 
+x4
+x5
+x6
+x7
+x8
+x9
+x10
+
+```
+
+
+#### Code for CREATE Transaction:
+
+
+```{r}
+DeleteAppUser <- function(userandhistory)
+
+{
+  tryCatch(  
+  expr = {
+  dbBegin(conn)
+dbSendQuery(conn,"SET GLOBAL local_infile=1;")  
+dbSendQuery(conn,"SET FOREIGN_KEY_CHECKS=0;") 
+query <- paste("SELECT userID, addressID FROM AppUser Where UserID =",userandhistory[1],";",sep='')
+query1 <- paste("SELECT LogID FROM ContactHistoryLog WHERE LogID =",userandhistory[2],";",sep='')
+value <- dbGetQuery(conn,query)
+value1 <- dbGetQuery(conn,query1)
+
+
+  if(length(value$userID)<=0&&(value1$LogID)<=0){
+      print("Transaction failed...rolling back")
+      dbRollback(conn)
+    }
+    else{
+  print("UserID and LogID Exist..Total 10 records being deleted...")
+      
+  query3 <- paste("DELETE FROM ContactHistoryLog WHERE LogID = ",userandhistory[2],";", sep='')
+  dbSendQuery(conn,query3)
+  query4 <- paste("DELETE FROM UserEvents WHERE LogBookID = ",userandhistory[2],";", sep='')
+  dbSendQuery(conn,query4)
+  query5 <- paste("DELETE FROM Interactions WHERE interactinguserid = ",userandhistory[1],";", sep='')
+  dbSendQuery(conn,query5)
+  query6 <- paste("DELETE FROM visit WHERE visitinguserid = ",userandhistory[1],";", sep='')
+  dbSendQuery(conn,query6)  
+  query7 <- paste("DELETE FROM Assessment WHERE Takerid = ",userandhistory[1],";", sep='')
+  dbSendQuery(conn,query7)
+  query8 <- paste("DELETE FROM HealthReportCheck WHERE UserID = ",userandhistory[1],";", sep='')
+  dbSendQuery(conn,query8) 
+  query9 <- paste("DELETE FROM AppUser WHERE UserID = ",userandhistory[1],";", sep='')
+  dbSendQuery(conn,query9)
+  query10 <- paste("DELETE FROM AppUserEmail WHERE UserID = ",userandhistory[1],";", sep='')
+  dbSendQuery(conn,query10)
+  query11 <- paste("DELETE FROM Person WHERE PersonID = ",userandhistory[1],";", sep='')
+  dbSendQuery(conn,query11)
+  query12 <- paste("DELETE FROM personphone WHERE personid = ",userandhistory[1],";", sep='')
+  dbSendQuery(conn,query12)
+  
+  q1 <- paste("SELECT * FROM ContactHistoryLog WHERE LogID = ",userandhistory[2],";", sep='')
+  v1=dbGetQuery(conn,q1)
+  q2 <- paste("SELECT * FROM UserEvents WHERE LogBookID = ",userandhistory[2],";", sep='')
+  v2=dbGetQuery(conn,q2)
+  q3 <- paste("SELECT * FROM Interactions WHERE interactinguserid = ",userandhistory[1],";", sep='')
+  v3=dbGetQuery(conn,q3)
+  q4 <- paste("SELECT * FROM visit WHERE visitinguserid = ",userandhistory[1],";", sep='')
+  v4=dbGetQuery(conn,q4)  
+  q5 <- paste("SELECT * FROM Assessment WHERE Takerid = ",userandhistory[1],";", sep='')
+  v5=dbGetQuery(conn,q5)
+  q6 <- paste("SELECT * FROM HealthReportCheck WHERE UserID = ",userandhistory[1],";", sep='')
+  v6=dbGetQuery(conn,q6) 
+  q7 <- paste("SELECT * FROM AppUser WHERE UserID = ",userandhistory[1],";", sep='')
+  v7=dbGetQuery(conn,q7)
+  q8 <- paste("SELECT * FROM AppUserEmail WHERE UserID = ",userandhistory[1],";", sep='')
+  v8=dbGetQuery(conn,q8)
+  q9 <- paste("SELECT * FROM Person WHERE PersonID = ",userandhistory[1],";", sep='')
+  v9=dbGetQuery(conn,q9)
+  q10 <- paste("SELECT * FROM personphone WHERE personid = ",userandhistory[1],";", sep='')
+  v10=dbGetQuery(conn,q10)
+  
+  if(length(v1$LogID)==0&&length(v2$LogBookID)==0&&length(v3$interactinguserid)==0&&length(v4$visitinguserid)==0&&length(v5$TakerID)==0&&length(v6$UserID)==0&&length(v7$UserID)==0&&length(v8$UserID)==0&&length(v9$PersonID)==0&&length(v10$PersonID)==0)
+    
+    {
+    print("10 records have been deleted..commiting changes")
+    dbCommit(conn)
+  }
+  else
+  {
+    print("Transaction failed...rolling back")
+    dbRollback(conn)
+  }
+    }
+  
+}, error = function(e)
+{
+  print(e)
+   print("Transaction failed...rolling back")
+}
+)
+
+if(dbCommit(conn)==TRUE)
+{
+  print("Transaction Status:Closed")
+}
+else
+{
+  print("Transaction failed...rolling back")
+  dbRollback(conn)
+}
+dbSendQuery(conn,"SET GLOBAL local_infile=0;")  
+dbSendQuery(conn,"SET FOREIGN_KEY_CHECKS=1;")   
+}
+
+
+```
+
+#### Output for create transaction, and other tests
+
+```{r}
+# Creating test vector
+
+usrlog<-c(1184,1184)
+
+# Calling the function
+DeleteAppUser(usrlog)
+
+
+# Checking existence of tables that will be deleted after this transaction
+
+x1=dbGetQuery(conn,"SELECT * FROM ContactHistoryLog WHERE LogID =1184")
+x2=dbGetQuery(conn,"SELECT * FROM UserEvents WHERE LogBookID =1184")
+x3=dbGetQuery(conn,"SELECT * FROM Interactions WHERE interactinguserid =1184")
+x4=dbGetQuery(conn,"SELECT * FROM visit WHERE visitinguserid =1184")
+x5=dbGetQuery(conn,"SELECT * FROM Assessment WHERE Takerid = 1184")
+x6=dbGetQuery(conn,"SELECT * FROM HealthReportCheck WHERE UserID =1184")
+x7=dbGetQuery(conn,"SELECT * FROM AppUser WHERE UserID =1184 ")
+x8=dbGetQuery(conn,"SELECT * FROM AppUserEmail WHERE UserID =1184 ")
+x9=dbGetQuery(conn,"SELECT * FROM Person WHERE PersonID = 1184")
+x10=dbGetQuery(conn,"SELECT * FROM personphone WHERE personid = 1184")
+x1 
+x2 
+x3 
+x4
+x5
+x6
+x7
+x8
+x9
+x10
+
+```
+
+
+##### Test 2 - checking if transaction is implementing errorhandling and rollback after passing an incorrect value
+
+
+```{r}
+# Creating bad vector
+
+usrlog1<-c('text','value')
+
+
+# Calling the function
+DeleteAppUser(usrlog1)
+
+
+
+```
+
+<h4> [Back To Top](#) </h4>
+
+
+## TASK 8
+
+<h4> View the query plan for two alternatives of the same query. Compare the plan for the two queries and comment on the differences and how you would choose one versus another. </h4>
+
+***
+
+### Subquery vs Inner Join Query Plan
+<br/>
+<br/>
+
+#### Query 1
+<br/>
+
+##### SQL Code for Query Output, Status Variables (Handlers)
+<br/>
+- The query searches for the details of a person living in boston region, in the age group 55 to 85, who tested positive for covid and is showing high fever (temperature of over 101)
+
+***
+
+```{r}
+dbSendQuery(conn,"FLUSH STATUS;")
+
+res<-dbSendQuery(conn,"select personid, firstname, lastname
+from person where exists(select userid from appuser
+ where userid = person.personid 
+ and exists (select userid from HealthReportCheck where testresult='positive' 
+ and temperature>101 and userid=appuser.userid )
+ and age between 55 and 85
+ and exists (select placeid from place 
+ where city like '%boston%' 
+ and placeid=appuser.addressid )
+ );")
+
+df14<-dbFetch(res, n=-1)
+df14
+
+dbGetQuery(conn,"SHOW SESSION STATUS LIKE 'Handler%';")
+
+```
+
+<br/>
+<br/>
+
+##### Execution Plan:
+
+<br/>
+<br/>
+
+Screenshot from MySQL
+<br/>
+!["Image"](https://amanbatra.in/static/img3/q2_diagram.png)
+
+<br/>
+<br/>
+
+##### ANALYSIS Table:
+<br/>
+<br/>
+
+<details>
+<summary> **Click to view all the steps involved** </summary>
+
+**Tracking the STEPS:**
+
+1. Remove duplicate (appuser, person) rows using temporary table (weedout)  (cost=75.51 rows=1)
+
+2. Nested loop inner join  (cost=75.51 rows=1)
+
+3. Nested loop inner join  (cost=73.35 rows=6)
+
+4. Nested loop inner join  (cost=71.19 rows=6)
+
+5. Filter: ((healthreportcheck.TestResult = ‘positive’) and (healthreportcheck.Temperature > 101.000)) (cost=51.75 rows=56)
+
+6. Table scan on HealthReportCheck  (cost=51.75 rows=500)
+
+7. Filter: (appuser.Age between 55 and 85)  (cost=0.25 rows=0)
+
+8. Single-row index lookup on appuser using PRIMARY (UserID=healthreportcheck.UserID)  (cost=0.25 rows=1)
+
+9. Single-row index lookup on person using PRIMARY (PersonID=healthreportcheck.UserID)  (cost=0.27 rows=1)
+
+10. Filter: (place.city like ‘%boston%’)  (cost=0.25 rows=0)
+
+11. Single-row index lookup on place using PRIMARY (placeid=appuser.AddressID)  (cost=0.25 rows=1)
+
+</details>
+
+
+
+<br/>
+<br/>
+<br/>
+
+
+```{r}
+res<-dbSendQuery(conn,"EXPLAIN select personid, firstname, lastname
+from person where exists(select userid from appuser
+ where userid = person.personid 
+ and exists (select userid from HealthReportCheck where testresult='positive' 
+ and temperature>101 and userid=appuser.userid )
+ and age between 55 and 85
+ and exists (select placeid from place 
+ where city like '%boston%' 
+ and placeid=appuser.addressid )
+ );")
+
+df15<-dbFetch(res, n=-1)
+df15
+```
+
+
+<br/>
+Screenshot from MySQL
+<br/>
+!["Image"](https://amanbatra.in/static/img3/q2_explain.png)
+
+<br/>
+<br/>
+<br/>
+
+#### Second Query
+
+<br/>
+<br/>
+
+
+##### SQL Code for Query Output, Status Variables (Handlers)
+<br/>
+<br/>
+- The query searches for the details of a person living in boston region, in the age group 55 to 85, who tested positive for covid and is showing high fever (temperature of over 101)
+
+```{r}
+
+dbSendQuery(conn,"FLUSH STATUS;")
+
+res<-dbSendQuery(conn,"select p.personid,p.firstname,p.lastname from person p
+inner join appuser a on a.userid=p.personid
+inner join place l on l.placeid=a.addressid
+inner join healthreportcheck h on h.userid=a.userid
+where h.testresult ='positive'
+and a.age between 55 and 85
+and l.city like '%boston%'
+and h.temperature>101;")
+
+df16<-dbFetch(res, n=-1)
+df16
+dbGetQuery(conn,"SHOW SESSION STATUS LIKE 'Handler%';")
+
+```
+
+<br/>
+<br/>
+
+
+##### Execution Plan:
+
+<br/>
+<br/>
+Screenshot from MySQL
+!["Image"](https://amanbatra.in/static/img3/q1_diagram.png)
+
+<br/>
+<br/>
+
+##### ANALYSIS Table:
+<br/>
+<br/>
+
+<details>
+<summary> **Click to view all the steps involved **</summary>
+
+**Tracking the STEPS:**
+
+1. Nested loop inner join  (cost=75.51 rows=1)
+
+2. Nested loop inner join  (cost=73.35 rows=6)
+
+3. Nested loop inner join  (cost=71.19 rows=6)
+
+4. Filter: ((h.TestResult = ‘positive’) and (h.Temperature > 101.000))  (cost=51.75 rows=56)
+
+5. Table scan on h  (cost=51.75 rows=500)
+
+6. Filter: (a.Age between 55 and 85)  (cost=0.25 rows=0)
+
+7. Single-row index lookup on a using PRIMARY (UserID=h.UserID)  (cost=0.25 rows=1)
+
+8. Single-row index lookup on p using PRIMARY (PersonID=h.UserID)  (cost=0.27 rows=1)
+
+9. Filter: (l.city like ‘%boston%’)  (cost=0.25 rows=0) I
+
+10. Single-row index lookup on l using PRIMARY (placeid=a.AddressID)  (cost=0.25 rows=1)
+
+</details>
+
+
+```{r}
+res<-dbSendQuery(conn,"EXPLAIN select p.personid,p.firstname,p.lastname from person p
+inner join appuser a on a.userid=p.personid
+inner join place l on l.placeid=a.addressid
+inner join healthreportcheck h on h.userid=a.userid
+where h.testresult ='positive'
+and a.age between 55 and 85
+and l.city like '%boston%'
+and h.temperature>101;")
+
+df17<-dbFetch(res, n=-1)
+df17
+
+```
+<br/>
+Screenshot from MySQL
+<br/>
+!["Image"](https://amanbatra.in/static/img3/q1_explain.png)
+
+<br/>
+
+| Comparison Criteria                                              | Query 1 \- Correlated Subquery \(Nested\)                                                                                                                       | Query 2 \- Query With INNER JOIN                                                                                                  |
+|------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+|  Total Number of steps                                           | 11                                                                                                                                                              | 10 \- Winner                                                                                                                      |
+| Table Scans                                                      | 2                                                                                                                                                               | 1 \- Winner                                                                                                                       |
+| Nested Loops                                                     | 3                                                                                                                                                               | 3                                                                                                                                 |
+| Total Query Cost                                                 | 76\.648757                                                                                                                                                      | 75\.511624 \- Winner                                                                                                              |
+| Index types                                                      | All are Eq\-ref, \(No-non-unique-indexes\)                                                                                                                 | All are Eq\-ref, \(No-non-unique-indexes\)                                                                                   |
+| Rows searched without index                                      | 501                                                                                                                                                             | 501                                                                                                                               |
+| Average time of 50 executions                                    | 0\.00079                                                                                                                                                        | 0\.000695 \- Winner                                                                                                               |
+| When will this query be generally Preferable?                    | When the number of records are high this might work better \(200,000-1mil\)\.                                                                                    | When the number of records are medium to high but not very high \(0-200,000\)                                                    |
+| Preferable option for current number of records \(around 1300\)? | Not much difference, but I will not prefer it because query cost is comparatively lower, query takes 0\.0002s longer time, but this can grow with more records  | Preferable HERE because it is faster, cheaper, more optimized, offers more flexibility to maintain or retrieve multitable details |
+| Pros for this query                                              | 1\. I feel that this subquery is the logically correct way of solving this problem                                                                              | 1\. A "where exists" type of subquery can be very easily converted to a join, and it proves better for current operation          |
+|                                                                  | 2\. Don't have to be cautious about getting duplicated data, like in joins                                                                                      | 2\. This query offers more portability while preserving the optimization, because the tools I use are optimized for joins         |
+| Cons for this query                                              | 1\. Distinct is implicitly added in step 1, it is processor heavy                                                                                               | 1\. If a table is empty, we wont get anything, 0 rows will be retrieved                                                           |
+|                                                                  | 2\. More round trips, cannot utilize table cache\(tmp tables\), I cannot retrieve fields from multiple tables                                                   | 2\. If number of records increase, it may generate more data, and slow down                                                       |
+
+
+
+#### Comparison Conclusion
+
+76.65 - Query 2 is a better option here, it has less query cost, less round trips, takes less time, offers more readability to me, has lesser number of table scans, I can choose not use the distinct option, if I want all records or plan to avoid burdening the query engine. In future if the number of records will increase, it is possible that I may choose Query 1 over Query 2, in case it offers me more advantages. But for current query plan, I will choose query 2 over query 1
+
+**Notes on optimization:**
+
+1. Avoided the use of non-unique fields while searching. Used primary keys in subquery.
+2. Avoided the use of "WHERE IN"statements, instead used "WHERE EXISTS" as the EXISTS clause is much faster than IN when the subquery results is very large, so if my database scales, i could use query 1 in place of query 2.
+3. Both the queries offer similar performance on multiple verticals, since the database contains only 1300 records, the scalability of database might change all the current results. 
+4. Both the queries are converted to three nested-loop inner joins, so that means mysql query engine is optimized for using joins, and it actually performs better by utilizing joins and preventing table scans in this particular scenario.
+
+
+<br/>
+
+
+
+## TASK 9
+
+<h4> Add an index for a **non-key attribute** used in one of the queries in (8) and redo (8) to see new performance and query plan. </h4>
+
+***
+
+### Solution : { .tabset }
+
+#### Query 1
+
+<h4> Indexing a non-key field for the query-1 (correlated subquery):</h4>
+
+In task 8, we made two queries for the same task, here for task 9 - we borrow **Query-1 - the correlated subquery** and check if by indexing a non-unique attribute, can we improve our query plan and performance.
+
+
+!["Query 1 Execution Plan"](https://amanbatra.in/static/img3/q2_diagram.png)
+
+
+
+##### **Using indexing on our query plan to see any change in the performance:**
+<br/>
+
+1. In the execution plan diagram above for query 1, we can see that three out of four blocks (place, person, and appuser) use unique-key single-index lookups.
+
+2. Out of these blocks, only the first block "HealthReportCheck uses no index at all, instead performs a full tablescan with leads to a total query cost of 51.15 and a Handler_read_rnd_next count of 501.
+
+3. **Handler_read_rnd_next** count means 500 rows are searched through for each of the nested loop, higher value for this handler means some improvements may just be possible in the query plan.
+
+4. Handler_read_next indicates the number of times data is fetched from the data file by index when performing an index scan so for query 1, we can see that the value for Handler_read_next was 0, due to full table scan, higher value means better utilization of indexes
+
+5.Hence by building an index we may be able to prevent a table scan. The non unique attribute we are searching through in query 1 is "test result", which is an enum attribute from class HealthReportCheck, so we make an index on it and try to analyze our results for the query optimization.
+
+</br>
+
+##### Adding index and running the query again:
+
+<br/>
+
+***
+
+```{r}
+
+viewQueryVal=dbFetch(dbSendQuery(conn,'SELECT DISTINCT 1 FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA="contacttracingdb" AND TABLE_NAME="HealthReportCheck" AND INDEX_NAME="HealthRep";'))
+
+if(viewQueryVal!=1)
+   {
+     dbSendQuery(conn,"ALTER TABLE HealthReportCheck ADD INDEX `HealthRep`(`testresult`);")
+   }
+
+dbSendQuery(conn,"FLUSH STATUS;")
+
+res<-dbSendQuery(conn,"select personid, firstname, lastname
+from person where exists(select userid from appuser
+ where userid = person.personid 
+ and exists (select userid from HealthReportCheck where testresult='positive' 
+ and temperature>101 and userid=appuser.userid )
+ and age between 55 and 85
+ and exists (select placeid from place 
+ where city like '%boston%' 
+ and placeid=appuser.addressid )
+ );")
+
+df14<-dbFetch(res, n=-1)
+df14
+
+dbGetQuery(conn,"SHOW SESSION STATUS LIKE 'Handler%';")
+```
+
+
+##### Comparison Table After Indexing:
+
+
+<br/>
+
+| Criteria                                          | Before indexing | After indexing |
+|---------------------------------------------------|-----------------|----------------|
+| Total Query Cost                                  | 76\.65          | 38\.62         |
+| Average execution time for 50 runs                | 0\.000695       | 0\.00062       |
+| Total indexes utilized                            | 3               | 4              |
+| Total table scans                                 | 2               | 1              |
+| Total Handler\_read\_rnd\_next \(Less-is-better\) | 501             | 0              |
+| Total Handler\_read\_next \(More-is-better\)      | 0               | 133            |
+| Preferred option for this query                   | No              | Yes            |
+
+
+!["Execution Plan After Indexing"](https://amanbatra.in/static/img3/q1_indexed.png)
+
+***
+
+##### Notes on Optimization:
+
+1. Since I indexed an enum type non-key field, which is basically interpreted as a numeric field in the query engine, I was able to boost my performance by around 99% and cut down my query cost by almost 50%
+2. The same might not hold true if the field were a descriptive(text) field, because they are not interpreted as a numeric field internally.
+
+<br/>
+
+#### Query 2 (Extra)
+
+<h4> Indexing two non-key fields for a query (composite non-key index):</h4>
+
+<br/>
+<br/>
+
+##### SQL Code for Query Output, Status Variables (Handlers)
+
+
+<br/>
+
+- The query fetches the details of all the health report workers in boston who are keeping an eye on the local people who tested positive for covid, or are suspected, and show certain symptoms like a meld-fever(>99.5), or a drop in the oxygen level (<90).
+
+***
+
+```{r} 
+dbSendQuery(conn,"FLUSH STATUS;")
+
+res<-dbSendQuery(conn,"select  personid, firstname, lastname from person where personid in 
+(select AssignedWorkerID from contacthistorylog where logid in 
+(select logbookid from userevents where eventid in 
+(select interactionid from interactions where interactinguserid in 
+(select userid from appuser where addressid in 
+(select placeid from place where city like '%boston%') 
+and exists (select userid from HealthReportCheck where oxygenlevel<90 or temperature>99.5 and userid=interactions.interactinguserid)
+and RecoveredFromCovid=0
+and healthstatus in ('suspected','infected'))
+)));
+")
+
+df18<-dbFetch(res, n=-1)
+df18
+dbGetQuery(conn,"SHOW SESSION STATUS LIKE 'Handler%';")
+
+```
+
+
+<br/>
+<br/>
+
+
+##### Execution Plan:
+
+
+<br/>
+Screenshot from MySQL
+<br/>
+!["Execution Plan Before Indexing"](https://amanbatra.in/static/img3/extra.png)
+
+<br/>
+<br/>
+<br/>
+
+
+##### **Using indexing on our query plan to see any change in the performance:**
+
+
+
+1. In the execution plan diagram above for extra query, we can see that the block appuser and person utilize full-table scans and skip on indexes, so we try to make a composite index for our class appuser, on two non-unique attributes "CovidSuspected" and "HealthStatus". The composite index may not work efficiently because it will be stored in a non numeric format.
+
+2. **Handler_read_rnd_next** count means 1113 rows are searched through for each of the nested loop, higher value for this handler means some improvements may just be possible in the query plan.
+
+3. By building an index we may be able to prevent a table scan. so we make an index and try to analyze our results for this query.
+
+##### Adding a composite non-key index to the query and running again:
+
+
+```{r}
+viewQueryVal=dbFetch(dbSendQuery(conn,'SELECT DISTINCT 1 FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA="contacttracingdb" AND TABLE_NAME="appuser" AND INDEX_NAME="appuserhealth";'))
+
+
+if(viewQueryVal!=1)
+   {dbSendQuery(conn,"ALTER TABLE appuser ADD INDEX `appuserhealth`(`recoveredfromcovid`,`healthstatus`);")
+   }
+
+dbSendQuery(conn,"FLUSH STATUS;")
+            
+res<-dbSendQuery(conn,"select  personid, firstname, lastname from person where personid in 
+(select AssignedWorkerID from contacthistorylog where logid in 
+(select logbookid from userevents where eventid in 
+(select interactionid from interactions where interactinguserid in 
+(select userid from appuser where addressid in 
+(select placeid from place where city like '%boston%') 
+and exists (select userid from HealthReportCheck where oxygenlevel<90 or temperature>99.5 and userid=interactions.interactinguserid)
+and RecoveredFromCovid=0
+and healthstatus in ('suspected','infected'))
+)));
+")
+
+df18<-dbFetch(res, n=-1)
+df18
+dbGetQuery(conn,"SHOW SESSION STATUS LIKE 'Handler%';")
+```
+
+
+##### Comparison Table:
+
+<br/>
+
+| Criteria                                                    | Before indexing                                                                             | After indexing                                                   |
+|-------------------------------------------------------------|---------------------------------------------------------------------------------------------|------------------------------------------------------------------|
+| Total Query Cost \(Main-comparison\)                        | 296\.97 \- Winner                                                                           | 853\.16                                                          |
+| Average execution time for 50 runs                          | 0\.\\0011560 \- Winner                                                                      | 0\\\.002320                                                      |
+| Total transaction commits \(less-is-better\)                | 1 \- Winner                                                                                 | 17                                                               |
+| Total table locks/partition locks \(less-is-better\)        | 14 \- winner                                                                                | 102                                                              |
+| Total Handler\_read\_rnd\_next \\\(Less-is-better\\\) | 1003                                                                                        | 501 \- winner                                                    |
+| Total Handler\_read\_next \\\(More-is-better\\\)        | 19                                                                                          | 185 \- winner                                                    |
+| Preferred option for this query                             | Yes, fast and cheap, less locks means, table will be readily available for other operations | No, too slow, too costly, so many locks on tables, not preferred |
+
+
+
+<br/>
+
+!["Execution Plan After Indexing"](https://amanbatra.in/static/img3/extra_indexed.png)
+<br/>
+
+***
+
+##### Notes on Optimization:
+
+
+1. Since I indexed composite fields, the index actually slowed down the query performance because, the database reads a wide index range and has to fetch many rows individually, which adds to the query cost.
+
+2. We can conclude that, the use of non-unique indexes is NOT meant to boost performance every time, and it varies by every query, every user case, for example. in this case, the use of index actually decreased the performance by 66%.
+
+
+
+***
+
+<h4> [Back To Top](#) </h4>
+
+
+```{r}
+#Disconnecting from database
+
+dbDisconnect(conn)
+```
