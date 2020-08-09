@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<!DOCTYPE root [
+<!ELEMENT root (Room*, Manufacturer*, Furnishing*)>
+<!ELEMENT Room (length,width)>
+<!ATTLIST Room name ID #REQUIRED>
+<!ELEMENT length (#PCDATA)>
+<!ELEMENT width (#PCDATA)>
+<!ELEMENT Furnishing (type)>
+<!ATTLIST Furnishing fid ID #REQUIRED>
+<!ELEMENT type (#PCDATA)>
+<!ATTLIST Furnishing RoomRef IDREF #REQUIRED>
+<!ATTLIST Furnishing manufacturerRef IDREF #REQUIRED>
+<!ELEMENT Manufacturer (manufacturerName,contact)>
+<!ATTLIST Manufacturer mid ID #REQUIRED>
+<!ELEMENT manufacturerName (#PCDATA)>
+<!ELEMENT contact (#PCDATA)>
+]>
+
+<root>
+    <Room name="UpperKitchen">
+        <length>30ft</length>
+        <width>60ft</width>
+    </Room>
+    <Room name="LowerKitchen">
+        <length>50ft</length>
+        <width>50ft</width>
+    </Room>
+    <Room name="Bedroom1">
+        <length>34ft</length>
+        <width>43ft</width>
+    </Room>
+    <Room name="Bedroom2">
+        <length>56ft</length>
+        <width>27ft</width>
+    </Room>
+    <Room name="Bedroom3">
+        <length>77ft</length>
+        <width>40ft</width>
+    </Room>
+    <Room name="LivingRoom">
+        <length>30ft</length>
+        <width>60ft</width>
+    </Room>
+    <Room name="GuestRoom">
+        <length>60ft</length>
+        <width>40ft</width>
+    </Room>
+    <Room name="StorageRoom">
+        <length>40ft</length>
+        <width>40ft</width>
+    </Room>
+    <Manufacturer mid="M140">
+        <manufacturerName>IKEA</manufacturerName>
+        <contact>(424) 532-2322,(424) 532-2323</contact>
+    </Manufacturer>
+    <Manufacturer mid="M141">
+        <manufacturerName>Ashley Furniture Industries</manufacturerName>
+        <contact>(428) 432-3310</contact>               
+    </Manufacturer>
+        <Manufacturer mid="M142">
+        <manufacturerName>Furniture Industries</manufacturerName>
+        <contact>(628) 532-3610</contact>               
+    </Manufacturer>
+    <Manufacturer mid="M143">
+        <manufacturerName>Emeco</manufacturerName>
+        <contact>(423) 532-2344, emeco@eme.co</contact>
+    </Manufacturer>
+    <Manufacturer mid="M144">
+        <manufacturerName>Coalesse</manufacturerName>
+        <contact>(423) 532-2344</contact>
+    </Manufacturer>
+    <Manufacturer mid="M145">
+        <manufacturerName>Rooms To Go</manufacturerName>
+        <contact>(423) 532-2344, rtg@gmail.cs</contact>
+    </Manufacturer>
+    <Furnishing fid="F12" manufacturerRef="M140" RoomRef="UpperKitchen">
+        <type>Double Bed</type>
+    </Furnishing>
+    <Furnishing fid="F13" manufacturerRef="M142" RoomRef="LowerKitchen">
+        <type>Table Unit</type>
+    </Furnishing>
+    <Furnishing fid="F14" manufacturerRef="M143" RoomRef="LowerKitchen">
+        <type>Study Table</type>
+    </Furnishing>
+    <Furnishing fid="F15" manufacturerRef="M144" RoomRef="StorageRoom">
+        <type>Single Bed</type>
+    </Furnishing>
+    <Furnishing fid="F16" manufacturerRef="M143" RoomRef="GuestRoom">
+        <type>Couch</type>
+    </Furnishing>
+    <Furnishing fid="F17" manufacturerRef="M142" RoomRef="Bedroom1">
+        <type>Chairs</type>
+    </Furnishing>
+    <Furnishing fid="F18" manufacturerRef="M145" RoomRef="Bedroom3">
+        <type>Cabinet</type>
+    </Furnishing>
+    <Furnishing fid="F19" manufacturerRef="M143" RoomRef="GuestRoom">
+        <type>Corner</type>
+    </Furnishing>
+</root>    
+

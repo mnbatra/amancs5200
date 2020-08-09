@@ -1,0 +1,194 @@
+---
+title: "Assignment - 9"
+author: "Aman Batra"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  html_notebook: default
+  word_document: default
+---
+
+```{r, setup, include=FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE, # show warnings
+  message = TRUE, # show messages
+  error = TRUE, # do not interrupt generation in case of errors,
+  echo = TRUE  # show R code
+)
+
+```
+<style type="text/css">
+
+h1.title {
+  font-size: 38px;
+  color: DarkRed;
+  text-align: center;
+    font-weight: bold;
+
+}
+h4.author {
+    font-size: 28px;
+  color: DarkRed;
+  text-align: center;
+    font-weight: bold;
+
+}
+</style>
+
+```{r include=FALSE}
+requiredPackages = c('XML','RCurl' )
+for(p in requiredPackages){
+  if(!require(p,character.only = TRUE)) install.packages(p)
+  library(p,character.only = TRUE)
+}
+library(XML)
+library(RCurl)
+```
+
+<h4>Implemented in R and FreeFormatter.com</h4>
+
+```{r include=FALSE}
+
+library(XML)
+library(RCurl)
+xml.url <- "https://amanbatra.in/static/Books.xml"
+XMLData <- getURL(xml.url)
+xmlDocument = xmlParse(XMLData)
+r = xmlRoot(xmlDocument)
+```
+
+<br/>
+
+## Query 1
+
+<h4> What is the title of the book written by "Galos, Mike"? </h4>
+
+```{r}
+# QUERY 1 - What is the title of the book written by "Galos, Mike"?
+
+bookname = xpathSApply(xmlDocument,'//book[author="Galos, Mike"]/title/text()', xmlValue)
+bookname
+
+```
+
+
+XPath Query(relative) : //book[author="Galos, Mike"]/title/text()
+
+XPath Query(absolute) : /catalog/book[author="Galos, Mike"]/title/text()
+
+
+Output from https://www.freeformatter.com/xpath-tester.html#ad-output
+
+<br/>
+
+![Screenshot from https://www.freeformatter.com/xpath-tester.html#ad-output](https://amanbatra.in/static/img3/1.png)
+
+
+<br/>
+<br/>
+
+
+### Query 2
+
+<h4> What are the publication dates of all books written by "O'Brien, Tim"?. </h4>
+
+```{r}
+#QUERY 2 - What are the publication dates of all books written by "O'Brien, Tim"?.
+
+dfdate = xpathSApply(xmlDocument,'//book[author="O\'Brien, Tim"]/publish_date/text()', xmlValue)
+dfdate
+
+```
+
+XPath Query(relative) : //book[author="O'Brien, Tim"]/publish_date/text()
+
+XPath Query(absolute) : /catalog/book[author="O'Brien, Tim"]/publish_date/text()
+
+
+Output from https://www.freeformatter.com/xpath-tester.html#ad-output
+
+<br/>
+
+![Screenshot from https://www.freeformatter.com/xpath-tester.html#ad-output](https://amanbatra.in/static/img3/2.png)
+
+
+<br/>
+<br/>
+
+### Query 3
+<h4>List the title and prices of all books in the "Fantasy" genre.</h4>
+
+```{r}
+#QUERY 3 - List the title and prices of all books in the "Fantasy" genre.
+
+titleprice = xpathSApply(xmlDocument,'//book[genre = "Fantasy"]/title/text() | //book[genre = "Fantasy"]/price/text()', xmlValue)
+titleprice
+
+```
+
+XPath Query(relative) : //book[genre = "Fantasy"]/title/text() | //book[genre = "Fantasy"]/price/text()
+
+XPath Query(absolute) : /catalog/book[genre = "Fantasy"]/title/text() | /catalog/book[genre = "Fantasy"]/price/text()
+
+
+Output from https://www.freeformatter.com/xpath-tester.html#ad-output
+
+<br/>
+
+![Screenshot from https://www.freeformatter.com/xpath-tester.html#ad-output](https://amanbatra.in/static/img3/3.png)
+
+
+<br/>
+<br/>
+
+
+### Query 4
+
+<h4> In what genre is the book with id "bk109". </h4>
+
+```{r}
+#QUERY 4 - In what genre is the book with id "bk109".
+
+bookgenre = xpathSApply(xmlDocument,'//book[@id = "bk109"]/genre/text()', xmlValue)
+bookgenre
+
+```
+
+XPath Query(relative) :   //book[@id = "bk109"]/genre/text()
+
+XPath Query(absolute) :   /catalog/book[@id = "bk109"]/genre/text()
+
+
+Output from https://www.freeformatter.com/xpath-tester.html#ad-output
+
+<br/>
+
+![Screenshot from https://www.freeformatter.com/xpath-tester.html#ad-output](https://amanbatra.in/static/img3/4.png)
+
+
+<br/>
+<br/>
+
+### Query 5
+
+<h4>List the title and author of all books that cost less than $5.</h4>
+
+```{r}
+#QUERY 5 - List the title and author of all books that cost less than $5.
+
+lessthanfive = xpathSApply(xmlDocument,'//book[price < 5]/title/text() | //book[price < 5]/author/text()', xmlValue)
+lessthanfive
+
+```
+
+XPath Query(relative) :   //book[price < 5]/title/text() | //book[price < 5]/author/text()
+
+XPath Query(absolute) :   /catalog/book[price < 5]/title/text() | //book[price < 5]/author/text()
+
+Output from https://www.freeformatter.com/xpath-tester.html#ad-output
+
+<br/>
+<br/>
+
+![Screenshot from https://www.freeformatter.com/xpath-tester.html#ad-output](https://amanbatra.in/static/img3/5.png)
