@@ -1,0 +1,482 @@
+---
+title: "Assignment - 10"
+author: "Aman Batra"
+output:  
+  html_document:
+    df_print: paged
+    code_folding: show
+  pdf_document: default
+  html_notebook: default
+  word_document: default
+---
+
+```{r, setup, include=FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE, # show warnings
+  message = TRUE, # show messages
+  error = TRUE, # do not interrupt generation in case of errors,
+  echo = TRUE  # show R code
+)
+
+```
+
+<style type="text/css">
+
+h1.title {
+  font-size: 38px;
+  color: DarkRed;
+  text-align: center;
+    font-weight: bold;
+
+}
+h4.author {
+    font-size: 28px;
+  color: DarkRed;
+  text-align: center;
+    font-weight: bold;
+
+}
+</style>
+
+```{r include=FALSE}
+requiredPackages = c('data.table','maps','ggplot2','ggmap','mongolite','lubridate','gridExtra','dplyr')
+for(p in requiredPackages){
+  if(!require(p,character.only = TRUE)) install.packages(p)
+  library(p,character.only = TRUE)
+}
+library(data.table)
+library(ggplot2)
+library(dplyr)
+library(maps)
+library(ggmap)
+library(mongolite)
+library(lubridate)
+library(gridExtra)
+
+```
+
+***
+
+<h4>
+**NUID: 001877232**<br/>
+**Class: CS5200**<br/>
+**Academic Term: Summer-2, 2020**<br/>
+**Instructor: Dr. Martin Schedlbauer**<br/>
+**Email** : [Batra.am@northeastern.edu](mailto:Batra.am@northeastern.edu)<br/>
+**Type : Individual Submission**<br/>
+**GITHUB Repository:** [Click Here](https://github.com/predictbay/amancs5200/tree/master/Practicum%20-%201%20CS5200%20-%20Contact%20Tracing%20Database)
+
+***
+
+# {.tabset}
+
+## Part 1 - Installing MongoDB
+
+<br/>
+
+Installation Screenshots:
+
+<br/>
+
+Installing Mongo from Homebrew and setting default directory :
+
+"mongod --dbpath /users/amanbatra/desktop/Data/db"
+
+![Part 1](https://amanbatra.in/static/img3/Mongo1.png)
+
+<br/>
+
+Starting the Mongo DB Server
+
+"mongo --host localhost 27017"
+
+![Part 2](https://amanbatra.in/static/img3/Mongo2.png)
+
+<br/>
+ 
+Checking the MongoDB version
+"mongo --version"
+
+![Part 3](https://amanbatra.in/static/img3/Mongo3.png)
+
+<br/>
+
+Checking the installation of MongoDB compass:
+
+All databases have loaded correctly
+
+![Part 4](https://amanbatra.in/static/img3/Mongo4.png)
+
+
+<br/>
+
+## Part - 2  MongoDB in R
+
+<br/>
+
+
+```{r}
+
+# Setting up the working directory
+setwd("/users/amanbatra/desktop/Data/db")
+
+#reading the data heads from db file
+
+crimes=data.table::fread("Crimes_-_2001_to_Present.csv")
+names(crimes)
+
+#Remove space from column names, to make it easier for Mongo DB
+
+names(crimes) = gsub(" ","",names(crimes)) 
+names(crimes)
+
+```
+
+<br/>
+
+```{r}
+
+# Creating a new MongoDB collection object and loading the data into it
+
+my_collection = mongo(collection = "crimes", db = "Chicago") # create connection, database and collection
+my_collection$insert(crimes)
+
+# Checking the data count
+
+my_collection$count()
+
+# Fetching the first record from the R database object
+
+my_collection$iterate()$one()
+
+
+```
+
+<br/>
+
+
+## Part - 3, Running Queries & Creating Plots
+
+
+<br/>
+
+
+```{r}
+
+# How many distinct “Primary Type” aka types of crimes do we have?
+
+length(my_collection$distinct("PrimaryType"))
+
+# how many domestic assualts there are in the collection
+
+my_collection$count('{"PrimaryType" : "ASSAULT", "Domestic" : true }')
+
+# To get the filtered data and we can also retrieve only the columns of interest
+query1= my_collection$find('{"PrimaryType" : "ASSAULT", "Domestic" : true }')
+query2= my_collection$find('{"PrimaryType" : "ASSAULT", "Domestic" : true }',
+                           fields = '{"_id":0, "PrimaryType":1, "Domestic":1}')
+ncol(query1) # with all the columns
+ncol(query2) # only the selected columns
+
+```
+
+<br/>
+
+
+**Where do most crimes take place?**
+<br/>
+
+
+```{r}
+my_collection$aggregate('[{"$group":{"_id":"$LocationDescription", "Count": {"$sum":1}}}]')%>%na.omit()%>%
+  arrange(desc(Count))%>%head(10)%>%
+  ggplot(aes(x=reorder(`_id`,Count),y=Count))+
+  geom_bar(stat="identity",color='skyblue',fill='#b35900')+geom_text(aes(label = Count), color = "blue") +coord_flip()+xlab("Location Description")
+
+```
+
+<br/>
+
+If loading the entire dataset we are working with does not slow down our analysis, we can use data.table or dplyr but when dealing with big data, using MongoDB can give us performance boost as the whole data will not be loaded into mememory. We can reproduce the above plot without using MongoDB, like so:
+
+<br/>
+
+
+```{r}
+crimes%>%group_by(`LocationDescription`)%>%summarise(Total=n())%>% arrange(desc(Total))%>%head(10)%>%
+  ggplot(aes(x=reorder(`LocationDescription`,Total),y=Total))+
+  geom_bar(stat="identity",color='skyblue',fill='#b35900')+geom_text(aes(label = Total), color = "blue") +coord_flip()+xlab("Location Description")
+```
+
+
+
+<br/>
+
+Query to load only the columns we want and to save memory for our analysis.
+
+```{r}
+
+query3= my_collection$find('{}', fields = '{"_id":0, "Latitude":1, "Longitude":1,"Year":1}')
+
+options(max.print=500)
+print.data.frame(query3)
+
+```
+
+<br/>
+
+**Exploring domestic crimes**
+
+We can explore any patterns of domestic crimes. For example, are they common in certain days/hours/months?
+
+```{r}
+domestic=my_collection$find('{"Domestic":true}', fields = '{"_id":0, "Domestic":1,"Date":1}')
+domestic$Date= mdy_hms(domestic$Date)
+domestic$Weekday = weekdays(domestic$Date)
+domestic$Hour = hour(domestic$Date)
+domestic$month = month(domestic$Date,label=TRUE)
+
+WeekdayCounts = as.data.frame(table(domestic$Weekday))
+WeekdayCounts$Var1 = factor(WeekdayCounts$Var1, ordered=TRUE, levels=c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday","Saturday"))
+ggplot(WeekdayCounts, aes(x=Var1, y=Freq)) + geom_line(aes(group=1),size=2,color="red") + xlab("Day of the Week") + ylab("Total Domestic Crimes")+
+  ggtitle("Domestic Crimes in the City of Chicago Since 2001")+
+  theme(axis.title.x=element_blank(),axis.text.y = element_text(color="blue",size=11,angle=0,hjust=1,vjust=0),
+        axis.text.x = element_text(color="blue",size=11,angle=0,hjust=.5,vjust=.5),
+        axis.title.y = element_text(size=14),
+        plot.title=element_text(size=16,color="purple",hjust=0.5))
+
+```
+
+
+Domestic crimes are common over the weekend than in weekdays? What could be the reason?
+We can also see the pattern for each day by hour:
+
+
+```{r}
+DayHourCounts = as.data.frame(table(domestic$Weekday, domestic$Hour))
+DayHourCounts$Hour = as.numeric(as.character(DayHourCounts$Var2))
+ggplot(DayHourCounts, aes(x=Hour, y=Freq)) + geom_line(aes(group=Var1, color=Var1), size=1.4)+ylab("Count")+
+ylab("Total Domestic Crimes")+ggtitle("Domestic Crimes in the City of Chicago Since 2001")+
+theme(axis.title.x=element_text(size=14),axis.text.y = element_text(color="blue",size=11,angle=0,hjust=1,vjust=0),
+      axis.text.x = element_text(color="blue",size=11,angle=0,hjust=.5,vjust=.5),
+     axis.title.y = element_text(size=14),
+     legend.title=element_blank(),
+     plot.title=element_text(size=16,color="purple",hjust=0.5))
+
+
+```
+
+
+The crimes peak mainly around mid-night. We can also use one color for weekdays and another color for weekend as shown below.
+
+```{r}
+
+DayHourCounts$Type = ifelse((DayHourCounts$Var1 == "Sunday") | (DayHourCounts$Var1 == "Saturday"), "Weekend", "Weekday")
+
+ggplot(DayHourCounts, aes(x=Hour, y=Freq)) + geom_line(aes(group=Var1, color=Type), size=2, alpha=0.5) +
+ylab("Total Domestic Crimes")+ggtitle("Domestic Crimes in the City of Chicago Since 2001")+
+theme(axis.title.x=element_text(size=14),axis.text.y = element_text(color="blue",size=11,angle=0,hjust=1,vjust=0),
+      axis.text.x = element_text(color="blue",size=11,angle=0,hjust=.5,vjust=.5),
+     axis.title.y = element_text(size=14),
+     legend.title=element_blank(),
+     plot.title=element_text(size=16,color="purple",hjust=0.5))
+
+```
+
+
+The difference between weekend and weekdays are more clear from this figure than from the previous plot. We can also see the above pattern from a heatmap.
+
+
+```{r}
+DayHourCounts$Var1 = factor(DayHourCounts$Var1, ordered=TRUE, levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+ggplot(DayHourCounts, aes(x = Hour, y = Var1)) + geom_tile(aes(fill = Freq)) + scale_fill_gradient(name="Total MV Thefts", low="white", high="red") +
+ggtitle("Domestic Crimes in the City of Chicago Since 2001")+theme(axis.title.y = element_blank())+ylab("")+
+theme(axis.title.x=element_text(size=14),axis.text.y = element_text(size=13),
+      axis.text.x = element_text(size=13),
+     axis.title.y = element_text(size=14),
+     legend.title=element_blank(),
+     plot.title=element_text(size=16,color="purple",hjust=0.5))
+```
+
+
+From the heatmap, we can see more crimes over weekends and at night.
+
+
+```{r}
+monthCounts = as.data.frame(table(domestic$month))
+ggplot(monthCounts, aes(x=Var1, y=Freq)) + geom_line(aes(group=1),size=2,color="red") + xlab("Day of the Week") + ylab("Total Domestic Crimes")+
+ggtitle("Domestic Crimes in the City of Chicago Since 2001")+
+theme(axis.title.x=element_blank(),axis.text.y = element_text(color="blue",size=11,angle=0,hjust=1,vjust=0),
+      axis.text.x = element_text(color="blue",size=11,angle=0,hjust=.5,vjust=.5),
+     axis.title.y = element_text(size=14),
+     plot.title=element_text(size=16,color="purple",hjust=0.5))
+```
+
+
+Is domestic crime associated with temperature? Domestic crimes tremendously increases during the warm months.
+Now, let’s see the pattern of other crime types. Since there are 35 primary types, we cannot see all of them in this post. Let’s focus on four of the most common ones.
+
+```{r}
+crimes=my_collection$find('{}', fields = '{"_id":0, "PrimaryType":1,"Year":1}')
+crimes%>%group_by(PrimaryType)%>%summarize(Count=n())%>%arrange(desc(Count))%>%head(4)
+
+```
+
+
+As shown in the table above, the most common crime type is theft followed by battery. Narcotics is fourth most common while criminal damage is the third most common crime type in the city of Chicago.
+Now, let’s generate plots by day and hour.
+
+
+```{r}
+
+
+four_most_common=crimes%>%group_by(PrimaryType)%>%summarize(Count=n())%>%arrange(desc(Count))%>%head(4)
+four_most_common=four_most_common$PrimaryType
+
+crimes=my_collection$find('{}', fields = '{"_id":0, "PrimaryType":1,"Date":1}')
+crimes=filter(crimes,PrimaryType %in%four_most_common)
+crimes$Date= mdy_hms(crimes$Date)
+crimes$Weekday = weekdays(crimes$Date)
+crimes$Hour = hour(crimes$Date)
+crimes$month=month(crimes$Date,label = TRUE)
+
+g = function(data){
+    WeekdayCounts = as.data.frame(table(data$Weekday))
+    WeekdayCounts$Var1 = factor(WeekdayCounts$Var1, ordered=TRUE, levels=c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday","Saturday"))
+    ggplot(WeekdayCounts, aes(x=Var1, y=Freq)) + geom_line(aes(group=1),size=2,color="red") + xlab("Day of the Week") +
+    theme(axis.title.x=element_blank(),axis.text.y = element_text(color="blue",size=10,angle=0,hjust=1,vjust=0),
+          axis.text.x = element_text(color="blue",size=10,angle=0,hjust=.5,vjust=.5),
+         axis.title.y = element_text(size=11),
+         plot.title=element_text(size=12,color="purple",hjust=0.5))
+}
+
+g1=g(filter(crimes,PrimaryType=="THEFT"))+ggtitle("Theft")+ylab("Total Count")
+g2=g(filter(crimes,PrimaryType=="BATTERY"))+ggtitle("BATTERY")+ylab("Total Count")
+g3=g(filter(crimes,PrimaryType=="CRIMINAL DAMAGE"))+ggtitle("CRIMINAL DAMAGE")+ylab("Total Count")
+g4=g(filter(crimes,PrimaryType=="NARCOTICS"))+ggtitle("NARCOTICS")+ylab("Total Count")
+grid.arrange(g1,g2,g3,g4,ncol=2)
+
+g=function(data){
+    monthCounts = as.data.frame(table(data$month))
+    ggplot(monthCounts, aes(x=Var1, y=Freq)) + geom_line(aes(group=1),size=2,color="red") + xlab("Day of the Week") + 
+    theme(axis.title.x=element_blank(),axis.text.y = element_text(color="blue",size=11,angle=0,hjust=1,vjust=0),
+          axis.text.x = element_text(color="blue",size=11,angle=0,hjust=.5,vjust=.5),
+         axis.title.y = element_text(size=14),
+         plot.title=element_text(size=16,color="purple",hjust=0.5))
+    }
+
+g1=g(filter(crimes,PrimaryType=="THEFT"))+ggtitle("Theft")+ylab("Total Count")
+g2=g(filter(crimes,PrimaryType=="BATTERY"))+ggtitle("BATTERY")+ylab("Total Count")
+g3=g(filter(crimes,PrimaryType=="CRIMINAL DAMAGE"))+ggtitle("CRIMINAL DAMAGE")+ylab("Total Count")
+g4=g(filter(crimes,PrimaryType=="NARCOTICS"))+ggtitle("NARCOTICS")+ylab("Total Count")
+grid.arrange(g1,g2,g3,g4,ncol=2)
+
+g=function(data){
+    monthCounts = as.data.frame(table(data$month))
+    ggplot(monthCounts, aes(x=Var1, y=Freq)) + geom_line(aes(group=1),size=2,color="red") + xlab("Day of the Week") + 
+    theme(axis.title.x=element_blank(),axis.text.y = element_text(color="blue",size=11,angle=0,hjust=1,vjust=0),
+          axis.text.x = element_text(color="blue",size=11,angle=0,hjust=.5,vjust=.5),
+         axis.title.y = element_text(size=14),
+         plot.title=element_text(size=16,color="purple",hjust=0.5))
+    }
+
+g1=g(filter(crimes,PrimaryType=="THEFT"))+ggtitle("Theft")+ylab("Total Count")
+g2=g(filter(crimes,PrimaryType=="BATTERY"))+ggtitle("BATTERY")+ylab("Total Count")
+g3=g(filter(crimes,PrimaryType=="CRIMINAL DAMAGE"))+ggtitle("CRIMINAL DAMAGE")+ylab("Total Count")
+g4=g(filter(crimes,PrimaryType=="NARCOTICS"))+ggtitle("NARCOTICS")+ylab("Total Count")
+grid.arrange(g1,g2,g3,g4,ncol=2)
+
+```
+
+
+Except, narcotics, all increase in the warmer months. Does this have any association with temperature?
+We can also produce maps
+
+```{r}
+ 
+# Register the google api key 
+
+ggmap::register_google(key = "MySecretAPIKey")
+
+# Load a map of Chicago into R:
+
+chicago <- get_map(location = "chicago", zoom = 11) 
+
+
+# Round our latitude and longitude to 2 digits of accuracy, and create a crime counts data frame for each area:
+
+query3= my_collection$find('{}', fields = '{"_id":0, "Latitude":1, "Longitude":1,"Year":1}')
+LatLonCounts=as.data.frame(table(round(query3$Longitude,2),round(query3$Latitude,2)))
+
+# Convert our Longitude and Latitude variable to numbers:
+
+LatLonCounts$Long = as.numeric(as.character(LatLonCounts$Var1))
+LatLonCounts$Lat = as.numeric(as.character(LatLonCounts$Var2))
+ggmap(chicago) + geom_tile(data = LatLonCounts, aes(x = Long, y = Lat, alpha = Freq), fill="red")+
+ggtitle("Crime Distribution")+labs(alpha="Count")+theme(plot.title = element_text(hjust=0.5))
+
+
+```
+
+
+We can also see a map for domestic crimes only:
+
+```{r}
+domestic=my_collection$find('{"Domestic":true}', fields = '{"_id":0, "Latitude":1, "Longitude":1,"Year":1}')
+LatLonCounts=as.data.frame(table(round(domestic$Longitude,2),round(domestic$Latitude,2)))
+LatLonCounts$Long = as.numeric(as.character(LatLonCounts$Var1))
+LatLonCounts$Lat = as.numeric(as.character(LatLonCounts$Var2))
+ggmap(chicago) + geom_tile(data = LatLonCounts, aes(x = Long, y = Lat, alpha = Freq), fill="red")+
+ggtitle("Domestic Crimes")+labs(alpha="Count")+theme(plot.title = element_text(hjust=0.5))
+
+```
+
+
+
+Let’s see where motor vehicle theft is common:
+
+
+```{r}
+mtheft=my_collection$find('{"PrimaryType":"MOTOR VEHICLE THEFT"}', fields = '{"_id":0, "Latitude":1, "Longitude":1,"Year":1}')
+LatLonCounts=as.data.frame(table(round(mtheft$Longitude,2),round(mtheft$Latitude,2)))
+LatLonCounts$Long = as.numeric(as.character(LatLonCounts$Var1))
+LatLonCounts$Lat = as.numeric(as.character(LatLonCounts$Var2))
+ggmap(chicago) + geom_tile(data = LatLonCounts, aes(x = Long, y = Lat, alpha = Freq), fill="red")+
+ggtitle("Motor Vehicle Theft ")+labs(alpha="Count")+theme(plot.title = element_text(hjust=0.5))
+
+```
+
+
+Domestic crimes show concentration over two areas whereas motor vehicle theft is wide spread over large part of the city of Chicago.
+
+
+
+
+## Part 4 - A query of choice
+
+
+Finding the count for each primary type of crime, and plotting heat maps or concentration maps for most common type of crime:
+
+```{r}
+
+least_crimes=my_collection$find('{}', fields = '{"_id":0, "PrimaryType":1,"Year":1}')
+least_crimes%>%group_by(PrimaryType)%>%summarize(Count=n())%>%arrange(desc(Count))%>%head(-1)
+
+my_collection$aggregate('[{"$group":{"_id":"$PrimaryType", "Count": {"$sum":1}}}]')%>%na.omit()%>%
+  arrange(desc(Count))%>%head(10)%>%
+  ggplot(aes(x=reorder(`_id`,Count),y=Count))+
+  geom_bar(stat="identity",color='lightgreen',fill='#b35900')+geom_text(aes(label = Count), color = "green") +coord_flip()+xlab("Types of Crimes")
+
+# We can see that the most common type of crime is "THEFT", so lets make a heatmap for theft
+
+mtheft=my_collection$find('{"PrimaryType":"THEFT"}', fields = '{"_id":0, "Latitude":1, "Longitude":1,"Year":1}')
+LatLonCounts=as.data.frame(table(round(mtheft$Longitude,2),round(mtheft$Latitude,2)))
+LatLonCounts$Long = as.numeric(as.character(LatLonCounts$Var1))
+LatLonCounts$Lat = as.numeric(as.character(LatLonCounts$Var2))
+ggmap(chicago) + geom_tile(data = LatLonCounts, aes(x = Long, y = Lat, alpha = Freq), fill="red")+
+ggtitle("Theft")+labs(alpha="Count")+theme(plot.title = element_text(hjust=0.5))
+
+```
+
+
+# [Back To Top](#)

@@ -1,0 +1,2285 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <meta name="author" content="Aman Batra" />
+  <title>Practicum - 3</title>
+  <style type="text/css">
+      code{white-space: pre-wrap;}
+      span.smallcaps{font-variant: small-caps;}
+      span.underline{text-decoration: underline;}
+      div.column{display: inline-block; vertical-align: top; width: 50%;}
+  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- jQuery -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+  
+  <!-- bootstrap -->
+  <!--<link href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet"  id="style">-->
+  <script src="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+  
+  <!-- highlight.js -->
+  <!--<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/default.min.css" rel="stylesheet" id="code-style">-->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/highlight.min.js"></script>
+  <script>
+  hljs.LANGUAGES.r=function(a){var b="([a-zA-Z]|\\.[a-zA-Z.])[a-zA-Z0-9._]*";return{c:[a.HCM,{b:b,l:b,k:{keyword:"function if in break next repeat else for return switch while try tryCatch|10 stop warning require library attach detach source setMethod setGeneric setGroupGeneric setClass ...|10",literal:"NULL NA TRUE FALSE T F Inf NaN NA_integer_|10 NA_real_|10 NA_character_|10 NA_complex_|10"},r:0},{cN:"number",b:"0[xX][0-9a-fA-F]+[Li]?\\b",r:0},{cN:"number",b:"\\d+(?:[eE][+\\-]?\\d*)?L\\b",r:0},{cN:"number",b:"\\d+\\.(?!\\d)(?:i\\b)?",r:0},{cN:"number",b:"\\d+(?:\\.\\d*)?(?:[eE][+\\-]?\\d*)?i?\\b",r:0},{cN:"number",b:"\\.\\d+(?:[eE][+\\-]?\\d*)?i?\\b",r:0},{b:"`",e:"`",r:0},{cN:"string",b:'"',e:'"',c:[a.BE],r:0},{cN:"string",b:"'",e:"'",c:[a.BE],r:0}]}}(hljs); </script>
+  <!--<script type="text/javascript", src="https://yandex.st/highlightjs/7.3/languages/r.min.js"></script>-->
+  
+  <!-- Manific Popup -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/magnific-popup.js/0.8.9/jquery.magnific-popup.min.js"></script>
+  
+  <script type="text/javascript"
+    src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+  </script>
+  <script defer="defer">
+  // Function to generate the dynamic table of contents
+  jQuery.fn.generate_TOC = function () {
+    var base = $(this[0]);
+  
+    var selectors = ['h1', 'h2', 'h3', 'h4'];
+  
+    var last_ptr = [{}, {}, {}, {}];
+  
+    var anchors = {};
+  
+    generate_anchor = function (text) {
+      var test = text.replace(/\W/g, '_');
+  
+      while(test in anchors){
+        //if no suffix, add one
+        if(test.match(/_\d+$/) === null){
+          test = test + "_2";
+        }
+        //else generate unique id for duplicates by adding one to the suffix
+        else {
+          test = test.replace(/_(\d+)$/, function(match, number){ var num=+number+1; return("_" + num) });
+        }
+      }
+      anchors[test]=1;
+      return(test);
+    }
+  
+    $(selectors.join(',')).filter(function(index) { return $(this).parent().attr("id") != 'header'; }).each(function () {
+  
+      var heading = $(this);
+      var idx = selectors.indexOf(heading.prop('tagName').toLowerCase());
+      var itr = 0;
+  
+      while (itr <= idx) {
+        if (jQuery.isEmptyObject(last_ptr[itr])) {
+          last_ptr[itr] = $('<ul>').addClass('nav');
+          if (itr === 0) {
+            base.append(last_ptr[itr])
+          } else {
+            if(last_ptr[itr-1].children('li').length === 0){
+              last_ptr[itr-1].append(last_ptr[itr]);
+            }
+            else {
+              last_ptr[itr - 1].children('li').last().append(last_ptr[itr]);
+            }
+          }
+        }
+        itr++;
+      }
+      var anchor = generate_anchor(heading.text());
+      heading.attr('id', anchor);
+      var a = $('<a>')
+      .text(heading.text())
+      .attr('href', '#' + anchor);
+  
+    var li = $('<li>')
+      .append(a);
+  
+    last_ptr[idx].append(li);
+    for (i = idx + 1; i < last_ptr.length; i++) {
+      last_ptr[i] = {};
+    }
+    });
+  }
+  /* run scripts when document is ready */
+  $(function() {
+    "use strict";
+  
+    var $window = $(window);
+    var $body = $(document.body);
+  
+    /* size of thumbnails */
+  
+    var hidden_types = ['source']
+    var output_types = ['output', 'message', 'warning', 'error']
+  
+    /* style tables */
+    $('table').addClass('table table-striped table-bordered table-hover table-condensed');
+  
+    $('pre code').each(function(i, e) {
+      hljs.highlightBlock(e);
+    });
+  
+    /* Magnific Popup */
+    $(".thumbnail").each(function(){
+      $(this).magnificPopup({
+        disableOn: 768,
+        closeOnContentClick: true,
+  
+        type: 'image',
+        items: {
+          src: $(this).find('img').attr('src'),
+        }
+      });
+    });
+  
+    function toggle_block(obj, show) {
+      var span = obj.find('span');
+      if(show === true){
+        span.removeClass('glyphicon-chevron-up').addClass('glyphicon-chevron-down');
+        obj.next('pre').slideDown();
+      }
+      else {
+        span.removeClass('glyphicon-chevron-down').addClass('glyphicon-chevron-up');
+        obj.next('pre').slideUp();
+      }
+    }
+  
+    function toggle_thumbnails(imgs, show){
+      if(show === true){
+        imgs.parents().show()
+        imgs.slideDown();
+      }
+      else {
+        imgs.slideUp(400, function(){ $(this).parent().hide(); });
+      }
+    }
+  
+    function global_toggle(obj){
+      var type = obj.attr('type');
+      var show = !obj.parent('li').hasClass('active');
+      if(show === true){
+        obj.parent('li').addClass('active');
+      }
+      else{
+        obj.parent('li').removeClass('active');
+      }
+      if(type == 'figure'){
+        toggle_thumbnails($('.thumbnail img'), show);
+      }
+      else {
+        $('.toggle.' + type).each(function() { toggle_block($(this), show); });
+      }
+    }
+  
+    /* onclick toggle next code block */
+    $('.toggle').click(function() {
+      var span = $(this).find('span');
+      toggle_block($(this), !span.hasClass('glyphicon-chevron-down'));
+      return false
+    })
+  
+    // global toggles
+    $('.toggle-global').click(function(){
+      var type = $(this).attr('type');
+      if(type === 'all-source'){
+          $('li a.source').each(function() {
+            global_toggle($(this));
+          });
+        }
+      else if(type === 'all-output'){
+        $.each(output_types, function(i, val){
+          console.log(val);
+          global_toggle($('li a.' + val));
+        });
+      }
+      else {
+        console.log($(this));
+        global_toggle($(this));
+      }
+      return false;
+    });
+    /* table of contents */
+    if($(['h1', 'h2', 'h3', 'h4'].join(',')).length > 0){
+      $('body > #wrap > .container > .row').append('<div class="col-md-2"><div id="toc" class="well sidebar sidenav affix hidden-print"/></div>');
+      $('#toc').generate_TOC();
+    }
+  
+    $.each(hidden_types, function(i, type) {
+      $('li[type=' + type + ']').each(function(){ global_toggle($(this)); });
+    });
+  
+    /* remove paragraphs with no content */
+    $('p:empty').remove();
+  
+    $body.scrollspy({
+      target: '.sidebar',
+    });
+  
+    /* theme switch */
+    $('.theme-switch').click(function(){
+      var css = $('link[title=' + $(this).attr('title') + ']');
+      $('#theme[rel=stylesheet]').attr('href', css.attr('href'));
+      $('.theme-switch').closest('li').removeClass('active');
+      $(this).closest('li').addClass('active');
+      return false;
+    });
+    /* code style switch */ //TODO use same function for both of these?
+    $('.highlight-switch').click(function(){
+      var css = $('link[title="' + $(this).attr('title') + '"]');
+      $('#highlight[rel=stylesheet]').attr('href', css.attr('href'));
+      $('.highlight-switch').closest('li').removeClass('active');
+      $(this).closest('li').addClass('active');
+      return false;
+    });
+  
+    //TODO refresh on show/hide
+    $window.on('load', function () {
+      $body.scrollspy('refresh');
+    })
+  
+  });
+  
+  </script>
+  <style>
+  /* Knitr_bootstrap styles */
+  #header {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  #wrap .container-fluid {
+    padding: 0;
+    overflow: hidden;
+  }
+  .toggle{
+    text-transform: capitalize;
+  }
+  
+  .toggle-global{
+    text-transform: capitalize;
+  }
+  
+  /* Sticky footer styles */
+  * {
+    margin:0;
+  }
+  html,
+  body {
+      height: 100%;
+      padding:0 !important;
+      /* The html and body elements cannot have any padding or margin. */
+      /*overflow-x: hidden;*/
+  }
+  
+  /* Wrapper for page content to push down footer */
+  #wrap {
+      min-height: 100%;
+      height: auto !important;
+      height: 100%;
+      /* Negative indent footer by it's height */
+      margin: 0 auto -120px;
+  }
+  
+  /* Set the fixed height of the footer here */
+  #push,
+  #footer {
+      height: 120px;
+  }
+  
+  #footer {
+    text-align: center;
+  }
+  
+  /* Top level subheader elements.  These are the first nested items underneath a header element. */
+  .header li {
+    font-size: 20px;
+  }
+  
+  /* Makes the font smaller for all subheader elements. */
+  .sub-header li {
+      font-size: 12px;
+  }
+  
+  button.thumbnails {
+    margin-left:0px;
+  }
+  
+  /*
+   * Side navigation
+   *
+   * Scrollspy and affixed enhanced navigation to highlight sections and secondary
+   * sections of docs content.
+   */
+  
+  /* By default it's not affixed in mobile views, so undo that */
+  .sidebar.affix {
+    position: static;
+  }
+  
+  /* First level of nav */
+  .sidenav {
+    margin-top: 30px;
+    margin-bottom: 30px;
+    padding-top:    10px;
+    padding-bottom: 10px;
+    border-radius: 5px;
+  }
+  
+  /* All levels of nav */
+  .sidebar .nav > li > a {
+    display: block;
+    padding: 5px 20px;
+  }
+  .sidebar .nav > li > a:hover,
+  .sidebar .nav > li > a:focus {
+    text-decoration: none;
+    border-right: 1px solid;
+  }
+  .sidebar .nav > .active > a,
+  .sidebar .nav > .active:hover > a,
+  .sidebar .nav > .active:focus > a {
+    font-weight: bold;
+    background-color: transparent;
+    border-right: 1px solid;
+  }
+  
+  /* Nav: second level (shown on .active) */
+  .sidebar .nav .nav {
+    display: none; /* Hide by default, but at >768px, show it */
+    margin-bottom: 8px;
+  }
+  .sidebar .nav .nav > li > a {
+    padding-top:    3px;
+    padding-bottom: 3px;
+    padding-left: 30px;
+    font-size: 90%;
+  }
+  
+  .sidebar .nav .nav .nav > li > a {
+    padding-left: 40px;
+  }
+  .sidebar .nav .nav .nav .nav > li > a {
+    padding-left: 50px;
+  }
+  
+  /* Show and affix the side nav when space allows it */
+  @media screen and (min-width: 992px) {
+    .sidebar .nav > .active > ul {
+      display: block;
+    }
+    /* Widen the fixed sidebar */
+    .sidebar.affix,
+    .sidebar.affix-bottom {
+      width: 213px;
+    }
+    .sidebar.affix-top,
+    .sidebar.affix {
+      position: fixed; /* Undo the static from mobile first approach */
+      top: 30px;
+    }
+    .sidebar.affix-bottom {
+      position: absolute; /* Undo the static from mobile first approach */
+    }
+    .sidebar.affix-bottom .sidenav,
+    .sidebar.affix .sidenav {
+      margin-top: 0;
+      margin-bottom: 0;
+    }
+  }
+  @media screen and (min-width: 1200px) {
+    /* Widen the fixed sidebar again */
+    .sidebar.affix-bottom,
+    .sidebar.affix {
+      width: 263px;
+    }
+  }
+  
+  #toc {
+    padding: 10px 0px;
+    margin:0;
+    border:0;
+  }
+  
+  
+  .panel pre {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  button + pre {
+    margin: 0;
+    padding: 0;
+  }
+  pre code {
+    border-radius: 0;
+  }
+  /* Magnific Popup CSS */
+  .mfp-bg {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1042;
+    overflow: hidden;
+    position: fixed;
+    background: #0b0b0b;
+    opacity: 0.8;
+    filter: alpha(opacity=80); }
+  
+  .mfp-wrap {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1043;
+    position: fixed;
+    outline: none !important;
+    -webkit-backface-visibility: hidden; }
+  
+  .mfp-container {
+    text-align: center;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    top: 0;
+    padding: 0 8px;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box; }
+  
+  .mfp-container:before {
+    content: '';
+    display: inline-block;
+    height: 100%;
+    vertical-align: middle; }
+  
+  .mfp-align-top .mfp-container:before {
+    display: none; }
+  
+  .mfp-content {
+    position: relative;
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0 auto;
+    text-align: left;
+    z-index: 1045; }
+  
+  .mfp-inline-holder .mfp-content,
+  .mfp-ajax-holder .mfp-content {
+    width: 100%;
+    cursor: auto; }
+  
+  .mfp-ajax-cur {
+    cursor: progress; }
+  
+  .mfp-zoom-out-cur,
+  .mfp-zoom-out-cur .mfp-image-holder .mfp-close {
+    cursor: -moz-zoom-out;
+    cursor: -webkit-zoom-out;
+    cursor: zoom-out; }
+  
+  .mfp-zoom {
+    cursor: pointer;
+    cursor: -webkit-zoom-in;
+    cursor: -moz-zoom-in;
+    cursor: zoom-in; }
+  
+  .mfp-auto-cursor .mfp-content {
+    cursor: auto; }
+  
+  .mfp-close,
+  .mfp-arrow,
+  .mfp-preloader,
+  .mfp-counter {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none; }
+  
+  .mfp-loading.mfp-figure {
+    display: none; }
+  
+  .mfp-hide {
+    display: none !important; }
+  
+  .mfp-preloader {
+    color: #cccccc;
+    position: absolute;
+    top: 50%;
+    width: auto;
+    text-align: center;
+    margin-top: -0.8em;
+    left: 8px;
+    right: 8px;
+    z-index: 1044; }
+  
+  .mfp-preloader a {
+    color: #cccccc; }
+  
+  .mfp-preloader a:hover {
+    color: white; }
+  
+  .mfp-s-ready .mfp-preloader {
+    display: none; }
+  
+  .mfp-s-error .mfp-content {
+    display: none; }
+  
+  button.mfp-close,
+  button.mfp-arrow {
+    overflow: visible;
+    cursor: pointer;
+    background: transparent;
+    border: 0;
+    -webkit-appearance: none;
+    display: block;
+    padding: 0;
+    z-index: 1046;
+    -webkit-box-shadow: none;
+    box-shadow: none; }
+  
+  button::-moz-focus-inner {
+    padding: 0;
+    border: 0; }
+  
+  .mfp-close {
+    width: 44px;
+    height: 44px;
+    line-height: 44px;
+    position: absolute;
+    right: 0;
+    top: 0;
+    text-decoration: none;
+    text-align: center;
+    opacity: 0.65;
+    padding: 0 0 18px 10px;
+    color: white;
+    font-style: normal;
+    font-size: 28px;
+    font-family: Arial, Baskerville, monospace; }
+    .mfp-close:hover, .mfp-close:focus {
+      opacity: 1; }
+    .mfp-close:active {
+      top: 1px; }
+  
+  .mfp-close-btn-in .mfp-close {
+    color: #333333; }
+  
+  .mfp-image-holder .mfp-close,
+  .mfp-iframe-holder .mfp-close {
+    color: white;
+    right: -6px;
+    text-align: right;
+    padding-right: 6px;
+    width: 100%; }
+  
+  .mfp-counter {
+    position: absolute;
+    top: 0;
+    right: 0;
+    color: #cccccc;
+    font-size: 12px;
+    line-height: 18px; }
+  
+  .mfp-arrow {
+    position: absolute;
+    opacity: 0.65;
+    margin: 0;
+    top: 50%;
+    margin-top: -55px;
+    padding: 0;
+    width: 90px;
+    height: 110px;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0); }
+  
+  .mfp-arrow:active {
+    margin-top: -54px; }
+  
+  .mfp-arrow:hover,
+  .mfp-arrow:focus {
+    opacity: 1; }
+  
+  .mfp-arrow:before, .mfp-arrow:after,
+  .mfp-arrow .mfp-b,
+  .mfp-arrow .mfp-a {
+    content: '';
+    display: block;
+    width: 0;
+    height: 0;
+    position: absolute;
+    left: 0;
+    top: 0;
+    margin-top: 35px;
+    margin-left: 35px;
+    border: medium inset transparent; }
+  .mfp-arrow:after,
+  .mfp-arrow .mfp-a {
+    border-top-width: 13px;
+    border-bottom-width: 13px;
+    top: 8px; }
+  .mfp-arrow:before,
+  .mfp-arrow .mfp-b {
+    border-top-width: 21px;
+    border-bottom-width: 21px; }
+  
+  .mfp-arrow-left {
+    left: 0; }
+    .mfp-arrow-left:after,
+    .mfp-arrow-left .mfp-a {
+      border-right: 17px solid white;
+      margin-left: 31px; }
+    .mfp-arrow-left:before,
+    .mfp-arrow-left .mfp-b {
+      margin-left: 25px;
+      border-right: 27px solid #3f3f3f; }
+  
+  .mfp-arrow-right {
+    right: 0; }
+    .mfp-arrow-right:after,
+    .mfp-arrow-right .mfp-a {
+      border-left: 17px solid white;
+      margin-left: 39px; }
+    .mfp-arrow-right:before,
+    .mfp-arrow-right .mfp-b {
+      border-left: 27px solid #3f3f3f; }
+  
+  .mfp-iframe-holder {
+    padding-top: 40px;
+    padding-bottom: 40px; }
+  
+  .mfp-iframe-holder .mfp-content {
+    line-height: 0;
+    width: 100%;
+    max-width: 900px; }
+  
+  .mfp-iframe-scaler {
+    width: 100%;
+    height: 0;
+    overflow: hidden;
+    padding-top: 56.25%; }
+  
+  .mfp-iframe-scaler iframe {
+    position: absolute;
+    display: block;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+    background: black; }
+  
+  .mfp-iframe-holder .mfp-close {
+    top: -40px; }
+  
+  /* Main image in popup */
+  img.mfp-img {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    display: block;
+    line-height: 0;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    padding: 40px 0 40px;
+    margin: 0 auto; }
+  
+  /* The shadow behind the image */
+  .mfp-figure:after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 40px;
+    bottom: 40px;
+    display: block;
+    right: 0;
+    width: auto;
+    height: auto;
+    z-index: -1;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+    background: #444444; }
+  
+  .mfp-figure {
+    line-height: 0; }
+  
+  .mfp-bottom-bar {
+    margin-top: -36px;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    cursor: auto; }
+  
+  .mfp-title {
+    text-align: left;
+    line-height: 18px;
+    color: #f3f3f3;
+    word-wrap: break-word;
+    padding-right: 36px; }
+  
+  .mfp-figure small {
+    color: #bdbdbd;
+    display: block;
+    font-size: 12px;
+    line-height: 14px; }
+  
+  .mfp-image-holder .mfp-content {
+    max-width: 100%; }
+  
+  .mfp-gallery .mfp-image-holder .mfp-figure {
+    cursor: pointer; }
+  
+  @media screen and (max-width: 800px) and (orientation: landscape), screen and (max-height: 300px) {
+    /**
+     * Remove all paddings around the image on small screen
+     */
+    .mfp-img-mobile .mfp-image-holder {
+      padding-left: 0;
+      padding-right: 0; }
+  
+    .mfp-img-mobile img.mfp-img {
+      padding: 0; }
+  
+    /* The shadow behind the image */
+    .mfp-img-mobile .mfp-figure:after {
+      top: 0;
+      bottom: 0; }
+  
+    .mfp-img-mobile .mfp-bottom-bar {
+      background: rgba(0, 0, 0, 0.6);
+      bottom: 0;
+      margin: 0;
+      top: auto;
+      padding: 3px 5px;
+      position: fixed;
+      -webkit-box-sizing: border-box;
+      -moz-box-sizing: border-box;
+      box-sizing: border-box; }
+  
+    .mfp-img-mobile .mfp-bottom-bar:empty {
+      padding: 0; }
+  
+    .mfp-img-mobile .mfp-counter {
+      right: 5px;
+      top: 3px; }
+  
+    .mfp-img-mobile .mfp-close {
+      top: 0;
+      right: 0;
+      width: 35px;
+      height: 35px;
+      line-height: 35px;
+      background: rgba(0, 0, 0, 0.6);
+      position: fixed;
+      text-align: center;
+      padding: 0; }
+  
+    .mfp-img-mobile .mfp-figure small {
+      display: inline;
+      margin-left: 5px; } }
+  @media all and (max-width: 900px) {
+    .mfp-arrow {
+      -webkit-transform: scale(0.75);
+      transform: scale(0.75); }
+  
+    .mfp-arrow-left {
+      -webkit-transform-origin: 0;
+      transform-origin: 0; }
+  
+    .mfp-arrow-right {
+      -webkit-transform-origin: 100%;
+      transform-origin: 100%; }
+  
+    .mfp-container {
+      padding-left: 6px;
+      padding-right: 6px; } }
+  .mfp-ie7 .mfp-img {
+    padding: 0; }
+  .mfp-ie7 .mfp-bottom-bar {
+    width: 600px;
+    left: 50%;
+    margin-left: -300px;
+    margin-top: 5px;
+    padding-bottom: 5px; }
+  .mfp-ie7 .mfp-container {
+    padding: 0; }
+  .mfp-ie7 .mfp-content {
+    padding-top: 44px; }
+  .mfp-ie7 .mfp-close {
+    top: 0;
+    right: 0;
+    padding-top: 0; }
+  
+  //Magnific overrides
+  .mfp-image img{
+    background: white;
+  }
+  .mfp-figure:after {
+    background: white;
+  }
+  
+  /*
+   * Off Canvas navbar toggle right
+   * --------------------------------------------------
+   */
+  
+  @media screen and (max-width: 768px) {
+    .row-offcanvas .collapsing {
+    -webkit-transition: none 0;
+      -moz-transition: none 0;
+      transition: none 0;
+    }
+   .row-offcanvas .navbar {
+    position: absolute;
+    z-index: 2;
+      right:0;
+      height:100%;
+      width:55px;
+      border:0;
+      background-color:transparent;
+    }
+    .row-offcanvas .navbar-toggle {
+      margin-right: 5px;
+      margin-left: 5px;
+    }
+    .row-offcanvas {
+      position: relative;
+    }
+    .row-offcanvas-right.active .navbar {
+    position: absolute;
+    z-index: 2;
+      right: -28.4%;
+      width:40%;
+      background-color:#eee;
+      border:0 solid #ddd;
+      border-left-width:1px;
+    }
+    .row-offcanvas-right.active {
+      left: -30%;
+    }
+    .row-offcanvas-right.active .navbar-collapse {
+      position: relative;
+      width: 100%;
+    }
+    .row-offcanvas .content {
+    /*width:calc(100% - 60px);*/
+    }
+  }
+  </style>
+</head>
+<body>
+<div id="header">
+<h1 class="title">Practicum - 3</h1>
+<h2 class="author">Aman Batra</h2>
+</div>
+<div id="wrap">
+<div class="container">
+<div class="row row-offcanvas row-offcanvas-right">
+<div class="contents col-xs-12 col-md-10">
+<style type="text/css">
+
+h1.title {
+  font-size: 38px;
+  color: DarkRed;
+  text-align: center;
+    font-weight: bold;
+
+}
+h4.author {
+    font-size: 28px;
+  color: DarkRed;
+  text-align: center;
+    font-weight: bold;
+
+}
+</style>
+<hr />
+<h4>
+<p><strong>NUID: 001877232</strong><br/> <strong>Class: CS5200</strong><br/> <strong>Academic Term: Summer-2, 2020</strong><br/> <strong>Instructor: Dr. Martin Schedlbauer</strong><br/> <strong>Email</strong> : <a href="mailto:Batra.am@northeastern.edu">Batra.am@northeastern.edu</a><br/> <strong>Type : Individual Submission</strong><br/> <strong>GITHUB Repository:</strong> <a href="https://github.com/predictbay/amancs5200/tree/master/Practicum%20-%201%20CS5200%20-%20Contact%20Tracing%20Database">Click Here</a></p>
+<hr />
+<h1 id="section" class="tabset"></h1>
+<h2 id="part-1---in-r-notebook">Part 1 - In R Notebook</h2>
+<p><br/></p>
+<h3 id="task-1">Task 1</h3>
+<h4>
+Inspect the Plant Catalog XML (plants.xml).
+</h4>
+<p>By visual inspection we can see that:</p>
+<ol style="list-style-type: decimal">
+<li><strong>No internal DTD is present in the schema</strong>, we cannot run an xml validation test, so we will preview the xml below.</li>
+<li>There are a total of 8 nodes, <strong>“CATALOG”</strong> is the root node and <strong>“PLANT”</strong> is the object node.</li>
+<li>Each instance of <strong>“PLANT”</strong> contains 6 nodes, <strong>“COMMON”, “BOTANICAL”, “ZONE”, “LIGHT”, “PRICE”</strong>, and <strong>“AVAILABILITY”</strong>.</li>
+</ol>
+<div class="row">
+<button class="source R toggle btn btn-xs btn-primary">
+<span class="glyphicon glyphicon-chevron-down"></span> R source
+</button>
+<pre style=""><code class="source r">xml.url <- "https://amanbatra.in/static/plants.xml"
+XMLData <- getURL(xml.url)
+xmlDocument = xmlParse(XMLData)
+xmlDocument</code></pre>
+<button class="output R toggle btn btn-xs btn-success">
+<span class="glyphicon glyphicon-chevron-down"></span> R output
+</button>
+<pre style=""><code class="output r">## <?xml version="1.0"?>
+## <CATALOG>
+##   <PLANT>
+##     <COMMON>Bloodroot</COMMON>
+##     <BOTANICAL>Sanguinaria canadensis</BOTANICAL>
+##     <ZONE>4</ZONE>
+##     <LIGHT>Mostly Shady</LIGHT>
+##     <PRICE>$2.44</PRICE>
+##     <AVAILABILITY>031599</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Columbine</COMMON>
+##     <BOTANICAL>Aquilegia canadensis</BOTANICAL>
+##     <ZONE>3</ZONE>
+##     <LIGHT>Mostly Shady</LIGHT>
+##     <PRICE>$9.37</PRICE>
+##     <AVAILABILITY>030699</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Marsh Marigold</COMMON>
+##     <BOTANICAL>Caltha palustris</BOTANICAL>
+##     <ZONE>4</ZONE>
+##     <LIGHT>Mostly Sunny</LIGHT>
+##     <PRICE>$6.81</PRICE>
+##     <AVAILABILITY>051799</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Cowslip</COMMON>
+##     <BOTANICAL>Caltha palustris</BOTANICAL>
+##     <ZONE>4</ZONE>
+##     <LIGHT>Mostly Shady</LIGHT>
+##     <PRICE>$9.90</PRICE>
+##     <AVAILABILITY>030699</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Dutchman's-Breeches</COMMON>
+##     <BOTANICAL>Dicentra cucullaria</BOTANICAL>
+##     <ZONE>3</ZONE>
+##     <LIGHT>Mostly Shady</LIGHT>
+##     <PRICE>$6.44</PRICE>
+##     <AVAILABILITY>012099</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Ginger, Wild</COMMON>
+##     <BOTANICAL>Asarum canadense</BOTANICAL>
+##     <ZONE>3</ZONE>
+##     <LIGHT>Mostly Shady</LIGHT>
+##     <PRICE>$9.03</PRICE>
+##     <AVAILABILITY>041899</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Hepatica</COMMON>
+##     <BOTANICAL>Hepatica americana</BOTANICAL>
+##     <ZONE>4</ZONE>
+##     <LIGHT>Mostly Shady</LIGHT>
+##     <PRICE>$4.45</PRICE>
+##     <AVAILABILITY>012699</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Liverleaf</COMMON>
+##     <BOTANICAL>Hepatica americana</BOTANICAL>
+##     <ZONE>4</ZONE>
+##     <LIGHT>Mostly Shady</LIGHT>
+##     <PRICE>$3.99</PRICE>
+##     <AVAILABILITY>010299</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Jack-In-The-Pulpit</COMMON>
+##     <BOTANICAL>Arisaema triphyllum</BOTANICAL>
+##     <ZONE>4</ZONE>
+##     <LIGHT>Mostly Shady</LIGHT>
+##     <PRICE>$3.23</PRICE>
+##     <AVAILABILITY>020199</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Mayapple</COMMON>
+##     <BOTANICAL>Podophyllum peltatum</BOTANICAL>
+##     <ZONE>3</ZONE>
+##     <LIGHT>Mostly Shady</LIGHT>
+##     <PRICE>$2.98</PRICE>
+##     <AVAILABILITY>060599</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Phlox, Woodland</COMMON>
+##     <BOTANICAL>Phlox divaricata</BOTANICAL>
+##     <ZONE>3</ZONE>
+##     <LIGHT>Sun or Shade</LIGHT>
+##     <PRICE>$2.80</PRICE>
+##     <AVAILABILITY>012299</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Phlox, Blue</COMMON>
+##     <BOTANICAL>Phlox divaricata</BOTANICAL>
+##     <ZONE>3</ZONE>
+##     <LIGHT>Sun or Shade</LIGHT>
+##     <PRICE>$5.59</PRICE>
+##     <AVAILABILITY>021699</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Spring-Beauty</COMMON>
+##     <BOTANICAL>Claytonia Virginica</BOTANICAL>
+##     <ZONE>7</ZONE>
+##     <LIGHT>Mostly Shady</LIGHT>
+##     <PRICE>$6.59</PRICE>
+##     <AVAILABILITY>020199</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Trillium</COMMON>
+##     <BOTANICAL>Trillium grandiflorum</BOTANICAL>
+##     <ZONE>5</ZONE>
+##     <LIGHT>Sun or Shade</LIGHT>
+##     <PRICE>$3.90</PRICE>
+##     <AVAILABILITY>042999</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Wake Robin</COMMON>
+##     <BOTANICAL>Trillium grandiflorum</BOTANICAL>
+##     <ZONE>5</ZONE>
+##     <LIGHT>Sun or Shade</LIGHT>
+##     <PRICE>$3.20</PRICE>
+##     <AVAILABILITY>022199</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Violet, Dog-Tooth</COMMON>
+##     <BOTANICAL>Erythronium americanum</BOTANICAL>
+##     <ZONE>4</ZONE>
+##     <LIGHT>Shade</LIGHT>
+##     <PRICE>$9.04</PRICE>
+##     <AVAILABILITY>020199</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Trout Lily</COMMON>
+##     <BOTANICAL>Erythronium americanum</BOTANICAL>
+##     <ZONE>4</ZONE>
+##     <LIGHT>Shade</LIGHT>
+##     <PRICE>$6.94</PRICE>
+##     <AVAILABILITY>032499</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Adder's-Tongue</COMMON>
+##     <BOTANICAL>Erythronium americanum</BOTANICAL>
+##     <ZONE>4</ZONE>
+##     <LIGHT>Shade</LIGHT>
+##     <PRICE>$9.58</PRICE>
+##     <AVAILABILITY>041399</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Anemone</COMMON>
+##     <BOTANICAL>Anemone blanda</BOTANICAL>
+##     <ZONE>6</ZONE>
+##     <LIGHT>Mostly Shady</LIGHT>
+##     <PRICE>$8.86</PRICE>
+##     <AVAILABILITY>122698</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Grecian Windflower</COMMON>
+##     <BOTANICAL>Anemone blanda</BOTANICAL>
+##     <ZONE>6</ZONE>
+##     <LIGHT>Mostly Shady</LIGHT>
+##     <PRICE>$9.16</PRICE>
+##     <AVAILABILITY>071099</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Bee Balm</COMMON>
+##     <BOTANICAL>Monarda didyma</BOTANICAL>
+##     <ZONE>4</ZONE>
+##     <LIGHT>Shade</LIGHT>
+##     <PRICE>$4.59</PRICE>
+##     <AVAILABILITY>050399</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Bergamot</COMMON>
+##     <BOTANICAL>Monarda didyma</BOTANICAL>
+##     <ZONE>4</ZONE>
+##     <LIGHT>Shade</LIGHT>
+##     <PRICE>$7.16</PRICE>
+##     <AVAILABILITY>042799</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Black-Eyed Susan</COMMON>
+##     <BOTANICAL>Rudbeckia hirta</BOTANICAL>
+##     <ZONE>Annual</ZONE>
+##     <LIGHT>Sunny</LIGHT>
+##     <PRICE>$9.80</PRICE>
+##     <AVAILABILITY>061899</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Buttercup</COMMON>
+##     <BOTANICAL>Ranunculus</BOTANICAL>
+##     <ZONE>4</ZONE>
+##     <LIGHT>Shade</LIGHT>
+##     <PRICE>$2.57</PRICE>
+##     <AVAILABILITY>061099</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Crowfoot</COMMON>
+##     <BOTANICAL>Ranunculus</BOTANICAL>
+##     <ZONE>4</ZONE>
+##     <LIGHT>Shade</LIGHT>
+##     <PRICE>$9.34</PRICE>
+##     <AVAILABILITY>040399</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Butterfly Weed</COMMON>
+##     <BOTANICAL>Asclepias tuberosa</BOTANICAL>
+##     <ZONE>Annual</ZONE>
+##     <LIGHT>Sunny</LIGHT>
+##     <PRICE>$2.78</PRICE>
+##     <AVAILABILITY>063099</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Cinquefoil</COMMON>
+##     <BOTANICAL>Potentilla</BOTANICAL>
+##     <ZONE>Annual</ZONE>
+##     <LIGHT>Shade</LIGHT>
+##     <PRICE>$7.06</PRICE>
+##     <AVAILABILITY>052599</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Primrose</COMMON>
+##     <BOTANICAL>Oenothera</BOTANICAL>
+##     <ZONE>3 - 5</ZONE>
+##     <LIGHT>Sunny</LIGHT>
+##     <PRICE>$6.56</PRICE>
+##     <AVAILABILITY>013099</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Gentian</COMMON>
+##     <BOTANICAL>Gentiana</BOTANICAL>
+##     <ZONE>4</ZONE>
+##     <LIGHT>Sun or Shade</LIGHT>
+##     <PRICE>$7.81</PRICE>
+##     <AVAILABILITY>051899</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Blue Gentian</COMMON>
+##     <BOTANICAL>Gentiana</BOTANICAL>
+##     <ZONE>4</ZONE>
+##     <LIGHT>Sun or Shade</LIGHT>
+##     <PRICE>$8.56</PRICE>
+##     <AVAILABILITY>050299</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Jacob's Ladder</COMMON>
+##     <BOTANICAL>Polemonium caeruleum</BOTANICAL>
+##     <ZONE>Annual</ZONE>
+##     <LIGHT>Shade</LIGHT>
+##     <PRICE>$9.26</PRICE>
+##     <AVAILABILITY>022199</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Greek Valerian</COMMON>
+##     <BOTANICAL>Polemonium caeruleum</BOTANICAL>
+##     <ZONE>Annual</ZONE>
+##     <LIGHT>Shade</LIGHT>
+##     <PRICE>$4.36</PRICE>
+##     <AVAILABILITY>071499</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>California Poppy</COMMON>
+##     <BOTANICAL>Eschscholzia californica</BOTANICAL>
+##     <ZONE>Annual</ZONE>
+##     <LIGHT>Sun</LIGHT>
+##     <PRICE>$7.89</PRICE>
+##     <AVAILABILITY>032799</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Shooting Star</COMMON>
+##     <BOTANICAL>Dodecatheon</BOTANICAL>
+##     <ZONE>Annual</ZONE>
+##     <LIGHT>Mostly Shady</LIGHT>
+##     <PRICE>$8.60</PRICE>
+##     <AVAILABILITY>051399</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Snakeroot</COMMON>
+##     <BOTANICAL>Cimicifuga</BOTANICAL>
+##     <ZONE>Annual</ZONE>
+##     <LIGHT>Shade</LIGHT>
+##     <PRICE>$5.63</PRICE>
+##     <AVAILABILITY>071199</AVAILABILITY>
+##   </PLANT>
+##   <PLANT>
+##     <COMMON>Cardinal Flower</COMMON>
+##     <BOTANICAL>Lobelia cardinalis</BOTANICAL>
+##     <ZONE>2</ZONE>
+##     <LIGHT>Shade</LIGHT>
+##     <PRICE>$3.02</PRICE>
+##     <AVAILABILITY>022299</AVAILABILITY>
+##   </PLANT>
+## </CATALOG>
+## 
+</code></pre>
+</div>
+<h3 id="task-2">Task 2</h3>
+<h4>
+Load the Plant Catalog XML directly into a dataframe using xmlToDataFrame.
+</h4>
+<div class="row">
+<button class="source R toggle btn btn-xs btn-primary">
+<span class="glyphicon glyphicon-chevron-down"></span> R source
+</button>
+<pre style=""><code class="source r"># Checking if the XML file exists in the directory or not, if not, it will be downloaded automatically via host
+
+if(file.exists("plants.xml")==FALSE) {
+download.file("https://amanbatra.in/static/plants.xml","./plants.xml")
+}
+# load data into dataframe from XMLData file
+xmldf = xmlToDataFrame("plants.xml")
+xmldf</code></pre>
+<button class="output R toggle btn btn-xs btn-success">
+<span class="glyphicon glyphicon-chevron-down"></span> R output
+</button>
+<pre style=""><code class="output r">##                 COMMON                BOTANICAL   ZONE        LIGHT PRICE
+## 1            Bloodroot   Sanguinaria canadensis      4 Mostly Shady $2.44
+## 2            Columbine     Aquilegia canadensis      3 Mostly Shady $9.37
+## 3       Marsh Marigold         Caltha palustris      4 Mostly Sunny $6.81
+## 4              Cowslip         Caltha palustris      4 Mostly Shady $9.90
+## 5  Dutchman's-Breeches      Dicentra cucullaria      3 Mostly Shady $6.44
+## 6         Ginger, Wild         Asarum canadense      3 Mostly Shady $9.03
+## 7             Hepatica       Hepatica americana      4 Mostly Shady $4.45
+## 8            Liverleaf       Hepatica americana      4 Mostly Shady $3.99
+## 9   Jack-In-The-Pulpit      Arisaema triphyllum      4 Mostly Shady $3.23
+## 10            Mayapple     Podophyllum peltatum      3 Mostly Shady $2.98
+## 11     Phlox, Woodland         Phlox divaricata      3 Sun or Shade $2.80
+## 12         Phlox, Blue         Phlox divaricata      3 Sun or Shade $5.59
+## 13       Spring-Beauty      Claytonia Virginica      7 Mostly Shady $6.59
+## 14            Trillium    Trillium grandiflorum      5 Sun or Shade $3.90
+## 15          Wake Robin    Trillium grandiflorum      5 Sun or Shade $3.20
+## 16   Violet, Dog-Tooth   Erythronium americanum      4        Shade $9.04
+## 17          Trout Lily   Erythronium americanum      4        Shade $6.94
+## 18      Adder's-Tongue   Erythronium americanum      4        Shade $9.58
+## 19             Anemone           Anemone blanda      6 Mostly Shady $8.86
+## 20  Grecian Windflower           Anemone blanda      6 Mostly Shady $9.16
+## 21            Bee Balm           Monarda didyma      4        Shade $4.59
+## 22            Bergamot           Monarda didyma      4        Shade $7.16
+## 23    Black-Eyed Susan          Rudbeckia hirta Annual        Sunny $9.80
+## 24           Buttercup               Ranunculus      4        Shade $2.57
+## 25            Crowfoot               Ranunculus      4        Shade $9.34
+## 26      Butterfly Weed       Asclepias tuberosa Annual        Sunny $2.78
+## 27          Cinquefoil               Potentilla Annual        Shade $7.06
+## 28            Primrose                Oenothera  3 - 5        Sunny $6.56
+## 29             Gentian                 Gentiana      4 Sun or Shade $7.81
+## 30        Blue Gentian                 Gentiana      4 Sun or Shade $8.56
+## 31      Jacob's Ladder     Polemonium caeruleum Annual        Shade $9.26
+## 32      Greek Valerian     Polemonium caeruleum Annual        Shade $4.36
+## 33    California Poppy Eschscholzia californica Annual          Sun $7.89
+## 34       Shooting Star              Dodecatheon Annual Mostly Shady $8.60
+## 35           Snakeroot               Cimicifuga Annual        Shade $5.63
+## 36     Cardinal Flower       Lobelia cardinalis      2        Shade $3.02
+##    AVAILABILITY
+## 1        031599
+## 2        030699
+## 3        051799
+## 4        030699
+## 5        012099
+## 6        041899
+## 7        012699
+## 8        010299
+## 9        020199
+## 10       060599
+## 11       012299
+## 12       021699
+## 13       020199
+## 14       042999
+## 15       022199
+## 16       020199
+## 17       032499
+## 18       041399
+## 19       122698
+## 20       071099
+## 21       050399
+## 22       042799
+## 23       061899
+## 24       061099
+## 25       040399
+## 26       063099
+## 27       052599
+## 28       013099
+## 29       051899
+## 30       050299
+## 31       022199
+## 32       071499
+## 33       032799
+## 34       051399
+## 35       071199
+## 36       022299
+</code></pre>
+</div>
+<p><br/></p>
+<p><br/></p>
+<h3 id="task-3">Task 3</h3>
+<h4>
+Create a new column retail that is a numeric column and has the data from the price column; note that the price column is text and contains a leading ‘$’ and needs to be parsed properly.
+</h4>
+<p><br/></p>
+<div class="row">
+<button class="source R toggle btn btn-xs btn-primary">
+<span class="glyphicon glyphicon-chevron-down"></span> R source
+</button>
+<pre style=""><code class="source r"># Extracting numeric prices from PRICE column and replacing the dollar sign with null.
+
+RETAIL=as.numeric(gsub("[\\$,]", "", xmldf$PRICE))
+
+# Adding a data column for prices without the Dollar sign in them, using the cbind method to bind a column, using if else to prevent double the operation, if column already present
+# checking output for the upda  ted data frame
+
+if("RETAIL" %in% colnames(xmldf))
+{
+xmldf;
+} else {
+xmldf=cbind(xmldf,RETAIL);
+xmldf;
+}</code></pre>
+<button class="output R toggle btn btn-xs btn-success">
+<span class="glyphicon glyphicon-chevron-down"></span> R output
+</button>
+<pre style=""><code class="output r">##                 COMMON                BOTANICAL   ZONE        LIGHT PRICE
+## 1            Bloodroot   Sanguinaria canadensis      4 Mostly Shady $2.44
+## 2            Columbine     Aquilegia canadensis      3 Mostly Shady $9.37
+## 3       Marsh Marigold         Caltha palustris      4 Mostly Sunny $6.81
+## 4              Cowslip         Caltha palustris      4 Mostly Shady $9.90
+## 5  Dutchman's-Breeches      Dicentra cucullaria      3 Mostly Shady $6.44
+## 6         Ginger, Wild         Asarum canadense      3 Mostly Shady $9.03
+## 7             Hepatica       Hepatica americana      4 Mostly Shady $4.45
+## 8            Liverleaf       Hepatica americana      4 Mostly Shady $3.99
+## 9   Jack-In-The-Pulpit      Arisaema triphyllum      4 Mostly Shady $3.23
+## 10            Mayapple     Podophyllum peltatum      3 Mostly Shady $2.98
+## 11     Phlox, Woodland         Phlox divaricata      3 Sun or Shade $2.80
+## 12         Phlox, Blue         Phlox divaricata      3 Sun or Shade $5.59
+## 13       Spring-Beauty      Claytonia Virginica      7 Mostly Shady $6.59
+## 14            Trillium    Trillium grandiflorum      5 Sun or Shade $3.90
+## 15          Wake Robin    Trillium grandiflorum      5 Sun or Shade $3.20
+## 16   Violet, Dog-Tooth   Erythronium americanum      4        Shade $9.04
+## 17          Trout Lily   Erythronium americanum      4        Shade $6.94
+## 18      Adder's-Tongue   Erythronium americanum      4        Shade $9.58
+## 19             Anemone           Anemone blanda      6 Mostly Shady $8.86
+## 20  Grecian Windflower           Anemone blanda      6 Mostly Shady $9.16
+## 21            Bee Balm           Monarda didyma      4        Shade $4.59
+## 22            Bergamot           Monarda didyma      4        Shade $7.16
+## 23    Black-Eyed Susan          Rudbeckia hirta Annual        Sunny $9.80
+## 24           Buttercup               Ranunculus      4        Shade $2.57
+## 25            Crowfoot               Ranunculus      4        Shade $9.34
+## 26      Butterfly Weed       Asclepias tuberosa Annual        Sunny $2.78
+## 27          Cinquefoil               Potentilla Annual        Shade $7.06
+## 28            Primrose                Oenothera  3 - 5        Sunny $6.56
+## 29             Gentian                 Gentiana      4 Sun or Shade $7.81
+## 30        Blue Gentian                 Gentiana      4 Sun or Shade $8.56
+## 31      Jacob's Ladder     Polemonium caeruleum Annual        Shade $9.26
+## 32      Greek Valerian     Polemonium caeruleum Annual        Shade $4.36
+## 33    California Poppy Eschscholzia californica Annual          Sun $7.89
+## 34       Shooting Star              Dodecatheon Annual Mostly Shady $8.60
+## 35           Snakeroot               Cimicifuga Annual        Shade $5.63
+## 36     Cardinal Flower       Lobelia cardinalis      2        Shade $3.02
+##    AVAILABILITY RETAIL
+## 1        031599   2.44
+## 2        030699   9.37
+## 3        051799   6.81
+## 4        030699   9.90
+## 5        012099   6.44
+## 6        041899   9.03
+## 7        012699   4.45
+## 8        010299   3.99
+## 9        020199   3.23
+## 10       060599   2.98
+## 11       012299   2.80
+## 12       021699   5.59
+## 13       020199   6.59
+## 14       042999   3.90
+## 15       022199   3.20
+## 16       020199   9.04
+## 17       032499   6.94
+## 18       041399   9.58
+## 19       122698   8.86
+## 20       071099   9.16
+## 21       050399   4.59
+## 22       042799   7.16
+## 23       061899   9.80
+## 24       061099   2.57
+## 25       040399   9.34
+## 26       063099   2.78
+## 27       052599   7.06
+## 28       013099   6.56
+## 29       051899   7.81
+## 30       050299   8.56
+## 31       022199   9.26
+## 32       071499   4.36
+## 33       032799   7.89
+## 34       051399   8.60
+## 35       071199   5.63
+## 36       022299   3.02
+</code></pre>
+</div>
+<p><br/> <br/></p>
+<h3 id="task-4">Task 4</h3>
+<h4>
+Remove the original price column (the one that is text) from the dataframe.
+</h4>
+<div class="row">
+<button class="source R toggle btn btn-xs btn-primary">
+<span class="glyphicon glyphicon-chevron-down"></span> R source
+</button>
+<pre style=""><code class="source r"># Passing all unwanted column names into a new variable
+
+unwantedcol <- "PRICE"
+
+# Performing self update, checking if column exists and dataframe and deleting it, the second way is commented out
+
+xmldf <- xmldf[, ! names(xmldf) %in% unwantedcol, drop = F]
+
+# xmldf<- within(xmldf,rm(PRICE))
+# output the final dataframe
+xmldf</code></pre>
+<button class="output R toggle btn btn-xs btn-success">
+<span class="glyphicon glyphicon-chevron-down"></span> R output
+</button>
+<pre style=""><code class="output r">##                 COMMON                BOTANICAL   ZONE        LIGHT
+## 1            Bloodroot   Sanguinaria canadensis      4 Mostly Shady
+## 2            Columbine     Aquilegia canadensis      3 Mostly Shady
+## 3       Marsh Marigold         Caltha palustris      4 Mostly Sunny
+## 4              Cowslip         Caltha palustris      4 Mostly Shady
+## 5  Dutchman's-Breeches      Dicentra cucullaria      3 Mostly Shady
+## 6         Ginger, Wild         Asarum canadense      3 Mostly Shady
+## 7             Hepatica       Hepatica americana      4 Mostly Shady
+## 8            Liverleaf       Hepatica americana      4 Mostly Shady
+## 9   Jack-In-The-Pulpit      Arisaema triphyllum      4 Mostly Shady
+## 10            Mayapple     Podophyllum peltatum      3 Mostly Shady
+## 11     Phlox, Woodland         Phlox divaricata      3 Sun or Shade
+## 12         Phlox, Blue         Phlox divaricata      3 Sun or Shade
+## 13       Spring-Beauty      Claytonia Virginica      7 Mostly Shady
+## 14            Trillium    Trillium grandiflorum      5 Sun or Shade
+## 15          Wake Robin    Trillium grandiflorum      5 Sun or Shade
+## 16   Violet, Dog-Tooth   Erythronium americanum      4        Shade
+## 17          Trout Lily   Erythronium americanum      4        Shade
+## 18      Adder's-Tongue   Erythronium americanum      4        Shade
+## 19             Anemone           Anemone blanda      6 Mostly Shady
+## 20  Grecian Windflower           Anemone blanda      6 Mostly Shady
+## 21            Bee Balm           Monarda didyma      4        Shade
+## 22            Bergamot           Monarda didyma      4        Shade
+## 23    Black-Eyed Susan          Rudbeckia hirta Annual        Sunny
+## 24           Buttercup               Ranunculus      4        Shade
+## 25            Crowfoot               Ranunculus      4        Shade
+## 26      Butterfly Weed       Asclepias tuberosa Annual        Sunny
+## 27          Cinquefoil               Potentilla Annual        Shade
+## 28            Primrose                Oenothera  3 - 5        Sunny
+## 29             Gentian                 Gentiana      4 Sun or Shade
+## 30        Blue Gentian                 Gentiana      4 Sun or Shade
+## 31      Jacob's Ladder     Polemonium caeruleum Annual        Shade
+## 32      Greek Valerian     Polemonium caeruleum Annual        Shade
+## 33    California Poppy Eschscholzia californica Annual          Sun
+## 34       Shooting Star              Dodecatheon Annual Mostly Shady
+## 35           Snakeroot               Cimicifuga Annual        Shade
+## 36     Cardinal Flower       Lobelia cardinalis      2        Shade
+##    AVAILABILITY RETAIL
+## 1        031599   2.44
+## 2        030699   9.37
+## 3        051799   6.81
+## 4        030699   9.90
+## 5        012099   6.44
+## 6        041899   9.03
+## 7        012699   4.45
+## 8        010299   3.99
+## 9        020199   3.23
+## 10       060599   2.98
+## 11       012299   2.80
+## 12       021699   5.59
+## 13       020199   6.59
+## 14       042999   3.90
+## 15       022199   3.20
+## 16       020199   9.04
+## 17       032499   6.94
+## 18       041399   9.58
+## 19       122698   8.86
+## 20       071099   9.16
+## 21       050399   4.59
+## 22       042799   7.16
+## 23       061899   9.80
+## 24       061099   2.57
+## 25       040399   9.34
+## 26       063099   2.78
+## 27       052599   7.06
+## 28       013099   6.56
+## 29       051899   7.81
+## 30       050299   8.56
+## 31       022199   9.26
+## 32       071499   4.36
+## 33       032799   7.89
+## 34       051399   8.60
+## 35       071199   5.63
+## 36       022299   3.02
+</code></pre>
+</div>
+<p><br/> <br/></p>
+<h3 id="task-5">Task 5</h3>
+<h4>
+Update all prices: increase them by 4.25%.
+</h4>
+<div class="row">
+<button class="source R toggle btn btn-xs btn-primary">
+<span class="glyphicon glyphicon-chevron-down"></span> R source
+</button>
+<pre style=""><code class="source r"># 4.25 % increase is equal to 104.25 % of the original value which can be written as (104.25/100)*Original Value or 1.0425*Original Value in short, the second way is commented out.
+
+xmldf$RETAIL=xmldf$RETAIL*1.0425
+
+# xmldf$RETAIL = xmldf$RETAIL  + (4.25/100)*xmldf$RETAIL
+# output only prices columns
+
+xmldf$RETAIL</code></pre>
+<button class="output R toggle btn btn-xs btn-success">
+<span class="glyphicon glyphicon-chevron-down"></span> R output
+</button>
+<pre style=""><code class="output r">##  [1]  2.543700  9.768225  7.099425 10.320750  6.713700  9.413775  4.639125
+##  [8]  4.159575  3.367275  3.106650  2.919000  5.827575  6.870075  4.065750
+## [15]  3.336000  9.424200  7.234950  9.987150  9.236550  9.549300  4.785075
+## [22]  7.464300 10.216500  2.679225  9.736950  2.898150  7.360050  6.838800
+## [29]  8.141925  8.923800  9.653550  4.545300  8.225325  8.965500  5.869275
+## [36]  3.148350
+</code></pre>
+<button class="source R toggle btn btn-xs btn-primary">
+<span class="glyphicon glyphicon-chevron-down"></span> R source
+</button>
+<pre style=""><code class="source r"># output the final dataframe
+xmldf</code></pre>
+<button class="output R toggle btn btn-xs btn-success">
+<span class="glyphicon glyphicon-chevron-down"></span> R output
+</button>
+<pre style=""><code class="output r">##                 COMMON                BOTANICAL   ZONE        LIGHT
+## 1            Bloodroot   Sanguinaria canadensis      4 Mostly Shady
+## 2            Columbine     Aquilegia canadensis      3 Mostly Shady
+## 3       Marsh Marigold         Caltha palustris      4 Mostly Sunny
+## 4              Cowslip         Caltha palustris      4 Mostly Shady
+## 5  Dutchman's-Breeches      Dicentra cucullaria      3 Mostly Shady
+## 6         Ginger, Wild         Asarum canadense      3 Mostly Shady
+## 7             Hepatica       Hepatica americana      4 Mostly Shady
+## 8            Liverleaf       Hepatica americana      4 Mostly Shady
+## 9   Jack-In-The-Pulpit      Arisaema triphyllum      4 Mostly Shady
+## 10            Mayapple     Podophyllum peltatum      3 Mostly Shady
+## 11     Phlox, Woodland         Phlox divaricata      3 Sun or Shade
+## 12         Phlox, Blue         Phlox divaricata      3 Sun or Shade
+## 13       Spring-Beauty      Claytonia Virginica      7 Mostly Shady
+## 14            Trillium    Trillium grandiflorum      5 Sun or Shade
+## 15          Wake Robin    Trillium grandiflorum      5 Sun or Shade
+## 16   Violet, Dog-Tooth   Erythronium americanum      4        Shade
+## 17          Trout Lily   Erythronium americanum      4        Shade
+## 18      Adder's-Tongue   Erythronium americanum      4        Shade
+## 19             Anemone           Anemone blanda      6 Mostly Shady
+## 20  Grecian Windflower           Anemone blanda      6 Mostly Shady
+## 21            Bee Balm           Monarda didyma      4        Shade
+## 22            Bergamot           Monarda didyma      4        Shade
+## 23    Black-Eyed Susan          Rudbeckia hirta Annual        Sunny
+## 24           Buttercup               Ranunculus      4        Shade
+## 25            Crowfoot               Ranunculus      4        Shade
+## 26      Butterfly Weed       Asclepias tuberosa Annual        Sunny
+## 27          Cinquefoil               Potentilla Annual        Shade
+## 28            Primrose                Oenothera  3 - 5        Sunny
+## 29             Gentian                 Gentiana      4 Sun or Shade
+## 30        Blue Gentian                 Gentiana      4 Sun or Shade
+## 31      Jacob's Ladder     Polemonium caeruleum Annual        Shade
+## 32      Greek Valerian     Polemonium caeruleum Annual        Shade
+## 33    California Poppy Eschscholzia californica Annual          Sun
+## 34       Shooting Star              Dodecatheon Annual Mostly Shady
+## 35           Snakeroot               Cimicifuga Annual        Shade
+## 36     Cardinal Flower       Lobelia cardinalis      2        Shade
+##    AVAILABILITY    RETAIL
+## 1        031599  2.543700
+## 2        030699  9.768225
+## 3        051799  7.099425
+## 4        030699 10.320750
+## 5        012099  6.713700
+## 6        041899  9.413775
+## 7        012699  4.639125
+## 8        010299  4.159575
+## 9        020199  3.367275
+## 10       060599  3.106650
+## 11       012299  2.919000
+## 12       021699  5.827575
+## 13       020199  6.870075
+## 14       042999  4.065750
+## 15       022199  3.336000
+## 16       020199  9.424200
+## 17       032499  7.234950
+## 18       041399  9.987150
+## 19       122698  9.236550
+## 20       071099  9.549300
+## 21       050399  4.785075
+## 22       042799  7.464300
+## 23       061899 10.216500
+## 24       061099  2.679225
+## 25       040399  9.736950
+## 26       063099  2.898150
+## 27       052599  7.360050
+## 28       013099  6.838800
+## 29       051899  8.141925
+## 30       050299  8.923800
+## 31       022199  9.653550
+## 32       071499  4.545300
+## 33       032799  8.225325
+## 34       051399  8.965500
+## 35       071199  5.869275
+## 36       022299  3.148350
+</code></pre>
+</div>
+<p><br/> <br/></p>
+<h3 id="task-6">Task 6</h3>
+<h4>
+Create a histogram of the number of plants by price. Adorn the chart – do some research on what you can do.
+</h4>
+<div class="row">
+<button class="source R toggle btn btn-xs btn-primary">
+<span class="glyphicon glyphicon-chevron-down"></span> R source
+</button>
+<pre style=""><code class="source r"># Making a histgram without any external libraries
+
+pricelist <- xmldf$RETAIL
+
+
+pricehist<- hist(pricelist,
+main="Histogram for plant prices in the catalog",
+xlab="Prices in dollars ($) ",
+xlim=c(0,12),
+ylab="Frequency Of Prices",
+ylim=c(0,12),
+col=c("darkgreen","blue","grey","black"),
+border="yellow",
+freq=TRUE,
+breaks=10
+)
+
+text(pricehist$mids,pricehist$counts,labels=pricehist$counts, adj=c(0.5, -0.5))</code></pre>
+<div class="row">
+<div class="col-md-offset-3 col-md-6">
+<a href="#" class="thumbnail"><img src="data:image/png;base64,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" /></a>
+</div>
+</div>
+<button class="source R toggle btn btn-xs btn-primary">
+<span class="glyphicon glyphicon-chevron-down"></span> R source
+</button>
+<pre style=""><code class="source r"># Making a histogram with ggplot2 (THIS SECTION IS OPTIONAL)
+
+require(ggplot2)
+
+set.seed(1L)
+binwidth <- 1
+start_bin <- binwidth * floor(min(pricelist) / binwidth)
+# compute breaks and bin the data
+breaks <- seq(start_bin, max(pricelist) + binwidth, by = binwidth)
+pricelist2 <- cut(sort(pricelist), breaks = breaks, by = binwidth)
+
+ggplot() + geom_col(aes(x = head(breaks, -1L), 
+                        y = as.integer(table(pricelist2)), 
+                        fill = levels(pricelist2))) +
+  ylab("Plant count") + xlab("Price List")</code></pre>
+<div class="row">
+<div class="col-md-offset-3 col-md-6">
+<a href="#" class="thumbnail"><img src="data:image/png;base64,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" /></a>
+</div>
+</div>
+</div>
+<p><br/> <br/></p>
+<h3 id="task-7">Task 7</h3>
+<h4>
+Using sqldf create a SQL query that finds the common names of all plants that cost less than $8 and grow in Sunny light
+</h4>
+<div class="row">
+<button class="source R toggle btn btn-xs btn-primary">
+<span class="glyphicon glyphicon-chevron-down"></span> R source
+</button>
+<pre style=""><code class="source r">queryxmldf <- sqldf("select COMMON from xmldf where RETAIL<8 and LIGHT='Sunny'")
+
+queryxmldf</code></pre>
+<button class="output R toggle btn btn-xs btn-success">
+<span class="glyphicon glyphicon-chevron-down"></span> R output
+</button>
+<pre style=""><code class="output r">##           COMMON
+## 1 Butterfly Weed
+## 2       Primrose
+</code></pre>
+</div>
+<p><br/> <br/></p>
+<h3 id="task-8">Task 8</h3>
+<h4>
+Using either sqldf or dataframe functions, how many plants grow in full shade?
+</h4>
+<div class="row">
+<button class="source R toggle btn btn-xs btn-primary">
+<span class="glyphicon glyphicon-chevron-down"></span> R source
+</button>
+<pre style=""><code class="source r"># SELECT count of plants where light = SHADE
+
+plantcountxmldf <- sqldf("select count(*) as 'Total plants that grow in full shade' from xmldf where LIGHT='Shade'")
+
+plantcountxmldf</code></pre>
+<button class="output R toggle btn btn-xs btn-success">
+<span class="glyphicon glyphicon-chevron-down"></span> R output
+</button>
+<pre style=""><code class="output r">##   Total plants that grow in full shade
+## 1                                   12
+</code></pre>
+</div>
+<p><br/> <br/></p>
+<h3 id="task-9">Task 9</h3>
+<h4>
+Write the dataframe to a new table in a new SQLite database using the dbWriteTable function.
+</h4>
+<div class="row">
+<button class="source R toggle btn btn-xs btn-primary">
+<span class="glyphicon glyphicon-chevron-down"></span> R source
+</button>
+<pre style=""><code class="source r"># Initializing an empty database and then using dbWriteTable to write the table to empty database
+# We will check using both dbReadTable and SQLite inspect, to see if the newly created table exists or not
+
+sqldbfile <- "catalog.db"
+
+if (file.exists(sqldbfile)==TRUE) {
+  file.remove(sqldbfile)}</code></pre>
+<button class="output R toggle btn btn-xs btn-success">
+<span class="glyphicon glyphicon-chevron-down"></span> R output
+</button>
+<pre style=""><code class="output r">## [1] TRUE
+</code></pre>
+<button class="source R toggle btn btn-xs btn-primary">
+<span class="glyphicon glyphicon-chevron-down"></span> R source
+</button>
+<pre style=""><code class="source r">con <- dbConnect(RSQLite::SQLite(), "catalog.db")
+dbWriteTable(con,
+             "catalog",
+             xmldf,
+             overwrite = TRUE,
+             header = TRUE,
+             temporary = FALSE)
+
+#first check via dbReadTable
+dbReadTable(con, "catalog")</code></pre>
+<button class="output R toggle btn btn-xs btn-success">
+<span class="glyphicon glyphicon-chevron-down"></span> R output
+</button>
+<pre style=""><code class="output r">##                 COMMON                BOTANICAL   ZONE        LIGHT
+## 1            Bloodroot   Sanguinaria canadensis      4 Mostly Shady
+## 2            Columbine     Aquilegia canadensis      3 Mostly Shady
+## 3       Marsh Marigold         Caltha palustris      4 Mostly Sunny
+## 4              Cowslip         Caltha palustris      4 Mostly Shady
+## 5  Dutchman's-Breeches      Dicentra cucullaria      3 Mostly Shady
+## 6         Ginger, Wild         Asarum canadense      3 Mostly Shady
+## 7             Hepatica       Hepatica americana      4 Mostly Shady
+## 8            Liverleaf       Hepatica americana      4 Mostly Shady
+## 9   Jack-In-The-Pulpit      Arisaema triphyllum      4 Mostly Shady
+## 10            Mayapple     Podophyllum peltatum      3 Mostly Shady
+## 11     Phlox, Woodland         Phlox divaricata      3 Sun or Shade
+## 12         Phlox, Blue         Phlox divaricata      3 Sun or Shade
+## 13       Spring-Beauty      Claytonia Virginica      7 Mostly Shady
+## 14            Trillium    Trillium grandiflorum      5 Sun or Shade
+## 15          Wake Robin    Trillium grandiflorum      5 Sun or Shade
+## 16   Violet, Dog-Tooth   Erythronium americanum      4        Shade
+## 17          Trout Lily   Erythronium americanum      4        Shade
+## 18      Adder's-Tongue   Erythronium americanum      4        Shade
+## 19             Anemone           Anemone blanda      6 Mostly Shady
+## 20  Grecian Windflower           Anemone blanda      6 Mostly Shady
+## 21            Bee Balm           Monarda didyma      4        Shade
+## 22            Bergamot           Monarda didyma      4        Shade
+## 23    Black-Eyed Susan          Rudbeckia hirta Annual        Sunny
+## 24           Buttercup               Ranunculus      4        Shade
+## 25            Crowfoot               Ranunculus      4        Shade
+## 26      Butterfly Weed       Asclepias tuberosa Annual        Sunny
+## 27          Cinquefoil               Potentilla Annual        Shade
+## 28            Primrose                Oenothera  3 - 5        Sunny
+## 29             Gentian                 Gentiana      4 Sun or Shade
+## 30        Blue Gentian                 Gentiana      4 Sun or Shade
+## 31      Jacob's Ladder     Polemonium caeruleum Annual        Shade
+## 32      Greek Valerian     Polemonium caeruleum Annual        Shade
+## 33    California Poppy Eschscholzia californica Annual          Sun
+## 34       Shooting Star              Dodecatheon Annual Mostly Shady
+## 35           Snakeroot               Cimicifuga Annual        Shade
+## 36     Cardinal Flower       Lobelia cardinalis      2        Shade
+##    AVAILABILITY    RETAIL
+## 1        031599  2.543700
+## 2        030699  9.768225
+## 3        051799  7.099425
+## 4        030699 10.320750
+## 5        012099  6.713700
+## 6        041899  9.413775
+## 7        012699  4.639125
+## 8        010299  4.159575
+## 9        020199  3.367275
+## 10       060599  3.106650
+## 11       012299  2.919000
+## 12       021699  5.827575
+## 13       020199  6.870075
+## 14       042999  4.065750
+## 15       022199  3.336000
+## 16       020199  9.424200
+## 17       032499  7.234950
+## 18       041399  9.987150
+## 19       122698  9.236550
+## 20       071099  9.549300
+## 21       050399  4.785075
+## 22       042799  7.464300
+## 23       061899 10.216500
+## 24       061099  2.679225
+## 25       040399  9.736950
+## 26       063099  2.898150
+## 27       052599  7.360050
+## 28       013099  6.838800
+## 29       051899  8.141925
+## 30       050299  8.923800
+## 31       022199  9.653550
+## 32       071499  4.545300
+## 33       032799  8.225325
+## 34       051399  8.965500
+## 35       071199  5.869275
+## 36       022299  3.148350
+</code></pre>
+<button class="source R toggle btn btn-xs btn-primary">
+<span class="glyphicon glyphicon-chevron-down"></span> R source
+</button>
+<pre style=""><code class="source r">dbDisconnect(con)</code></pre>
+</div>
+<p><br/> <br/></p>
+<hr />
+<h2 id="part-2---in-sqlite">Part 2 - In SQLite</h2>
+<p><br/> <br/></p>
+<h3 id="task-1-1">Task 1</h3>
+<p><br/></p>
+<h4>
+Inspect the database created in (9) above. Is the table there? What is its name? Are the columns correct?
+</h4>
+<p><br/></p>
+<p>The table is there in the SQLite database, and it can be seen in the image below in the list of tables, the new table was given the name ‘catalog’ in Task 9, and it can be clearly seen in the SQLite database.</p>
+<p><br/></p>
+<p><img src="https://amanbatra.in/static/img3/sqlite1.png" alt="Table Name Visible in SQLite DB" /> <br/> <br/></p>
+<p>The name of the table is ‘catalog’ The columns ‘COMMON’, ‘BOTANICAL’, ‘ZONE’, ‘LIGHT’, ‘AVAILABILITY’, and ‘RETAIL’ were present in our dataframe in Task 5, and they can be clearly seen in the screenshot given above</p>
+<p>The 36 records can be seen in the table contents:</p>
+<p><br/></p>
+<p><img src="https://amanbatra.in/static/img3/sqlite2.png" /></p>
+<p><br/> <br/></p>
+<h3 id="task-2-1">Task 2</h3>
+<br/>
+<h4>
+Write a SQL UPDATE statement that decreases all prices by 0.75%.
+</h4>
+<p><br/></p>
+<p>SQL Statement: ’UPDATE catalog SET RETAIL=RETAIL-(0.0075*RETAIL);’</p>
+<h4 id="execution-screenshots-from-sqlite-db">Execution screenshots from SQLite DB:</h4>
+<p><br/></p>
+<p>The image below shows the query and its successful execution in SQLite database:</p>
+<p><img src="https://amanbatra.in/static/img3/sqlite4.png" /></p>
+<p><br/></p>
+<p>The image below shows that the values in column “RETAIL” have been reduced by 0.75%</p>
+<p><img src="https://amanbatra.in/static/img3/sqlite5.png" /> <br/></p>
+<p>The image below highlights the new values for closer inspection:</p>
+<p><img src="https://amanbatra.in/static/img3/sqlite6.png" /></p>
+<p><br/> <br/></p>
+<hr />
+<h2 id="part-3--in-r-studio">Part 3 -In R Studio:</h2>
+<p><br> <br/></p>
+<h3 id="task-1-2">Task 1</h3>
+<h4>
+Connect to the SQLite database from above.
+</h4>
+<div class="row">
+<button class="source R toggle btn btn-xs btn-primary">
+<span class="glyphicon glyphicon-chevron-down"></span> R source
+</button>
+<pre style=""><code class="source r"># We are using two way connection to our SQLite database to ensure it does not go missing during execution or practicum submission
+# I check local storage first for the presence of database file "catalog.db" if for some reason, db isn't present then
+# I will load the file using my remote, the db at both place is exact same.
+
+
+if(file.exists("catalog.db")==TRUE){
+con <- dbConnect(SQLite(), dbname="catalog.db" )
+dbReadTable(con,"CATALOG")
+} else {
+  
+print("Database file catalog.db missing from root storage, downloading from remote")
+  dbfile <- tempfile(fileext=".db")
+  download.file("https://amanbatra.in/static/catalog.db", dbfile)
+  con <- dbConnect(SQLite(), dbname=dbfile )
+  dbReadTable(con,"catalog")
+}</code></pre>
+<button class="output R toggle btn btn-xs btn-success">
+<span class="glyphicon glyphicon-chevron-down"></span> R output
+</button>
+<pre style=""><code class="output r">##                 COMMON                BOTANICAL   ZONE        LIGHT
+## 1            Bloodroot   Sanguinaria canadensis      4 Mostly Shady
+## 2            Columbine     Aquilegia canadensis      3 Mostly Shady
+## 3       Marsh Marigold         Caltha palustris      4 Mostly Sunny
+## 4              Cowslip         Caltha palustris      4 Mostly Shady
+## 5  Dutchman's-Breeches      Dicentra cucullaria      3 Mostly Shady
+## 6         Ginger, Wild         Asarum canadense      3 Mostly Shady
+## 7             Hepatica       Hepatica americana      4 Mostly Shady
+## 8            Liverleaf       Hepatica americana      4 Mostly Shady
+## 9   Jack-In-The-Pulpit      Arisaema triphyllum      4 Mostly Shady
+## 10            Mayapple     Podophyllum peltatum      3 Mostly Shady
+## 11     Phlox, Woodland         Phlox divaricata      3 Sun or Shade
+## 12         Phlox, Blue         Phlox divaricata      3 Sun or Shade
+## 13       Spring-Beauty      Claytonia Virginica      7 Mostly Shady
+## 14            Trillium    Trillium grandiflorum      5 Sun or Shade
+## 15          Wake Robin    Trillium grandiflorum      5 Sun or Shade
+## 16   Violet, Dog-Tooth   Erythronium americanum      4        Shade
+## 17          Trout Lily   Erythronium americanum      4        Shade
+## 18      Adder's-Tongue   Erythronium americanum      4        Shade
+## 19             Anemone           Anemone blanda      6 Mostly Shady
+## 20  Grecian Windflower           Anemone blanda      6 Mostly Shady
+## 21            Bee Balm           Monarda didyma      4        Shade
+## 22            Bergamot           Monarda didyma      4        Shade
+## 23    Black-Eyed Susan          Rudbeckia hirta Annual        Sunny
+## 24           Buttercup               Ranunculus      4        Shade
+## 25            Crowfoot               Ranunculus      4        Shade
+## 26      Butterfly Weed       Asclepias tuberosa Annual        Sunny
+## 27          Cinquefoil               Potentilla Annual        Shade
+## 28            Primrose                Oenothera  3 - 5        Sunny
+## 29             Gentian                 Gentiana      4 Sun or Shade
+## 30        Blue Gentian                 Gentiana      4 Sun or Shade
+## 31      Jacob's Ladder     Polemonium caeruleum Annual        Shade
+## 32      Greek Valerian     Polemonium caeruleum Annual        Shade
+## 33    California Poppy Eschscholzia californica Annual          Sun
+## 34       Shooting Star              Dodecatheon Annual Mostly Shady
+## 35           Snakeroot               Cimicifuga Annual        Shade
+## 36     Cardinal Flower       Lobelia cardinalis      2        Shade
+##    AVAILABILITY    RETAIL
+## 1        031599  2.524622
+## 2        030699  9.694963
+## 3        051799  7.046179
+## 4        030699 10.243344
+## 5        012099  6.663347
+## 6        041899  9.343172
+## 7        012699  4.604332
+## 8        010299  4.128378
+## 9        020199  3.342020
+## 10       060599  3.083350
+## 11       012299  2.897107
+## 12       021699  5.783868
+## 13       020199  6.818549
+## 14       042999  4.035257
+## 15       022199  3.310980
+## 16       020199  9.353518
+## 17       032499  7.180688
+## 18       041399  9.912246
+## 19       122698  9.167276
+## 20       071099  9.477680
+## 21       050399  4.749187
+## 22       042799  7.408318
+## 23       061899 10.139876
+## 24       061099  2.659131
+## 25       040399  9.663923
+## 26       063099  2.876414
+## 27       052599  7.304850
+## 28       013099  6.787509
+## 29       051899  8.080861
+## 30       050299  8.856872
+## 31       022199  9.581148
+## 32       071499  4.511210
+## 33       032799  8.163635
+## 34       051399  8.898259
+## 35       071199  5.825255
+## 36       022299  3.124737
+</code></pre>
+</div>
+<p><br></p>
+<p><br/></p>
+<h3 id="task-2-2">Task 2</h3>
+<h4>
+Build and execute a SQL query that finds the number of plants by light.
+</h4>
+<div class="row">
+<button class="source R toggle btn btn-xs btn-primary">
+<span class="glyphicon glyphicon-chevron-down"></span> R source
+</button>
+<pre style=""><code class="source r"># The connection to SQLite database was initiated in the previous step, so we do not need to connect again
+
+# fetching the query result in local variable to store and display concurrently
+
+plantqueryres <- dbGetQuery(con, "SELECT COUNT(*) AS 'Number of plants grouped by light', LIGHT FROM catalog GROUP BY LIGHT")
+plantqueryres </code></pre>
+<button class="output R toggle btn btn-xs btn-success">
+<span class="glyphicon glyphicon-chevron-down"></span> R output
+</button>
+<pre style=""><code class="output r">##   Number of plants grouped by light        LIGHT
+## 1                                13 Mostly Shady
+## 2                                 1 Mostly Sunny
+## 3                                12        Shade
+## 4                                 1          Sun
+## 5                                 6 Sun or Shade
+## 6                                 3        Sunny
+</code></pre>
+<button class="source R toggle btn btn-xs btn-primary">
+<span class="glyphicon glyphicon-chevron-down"></span> R source
+</button>
+<pre style=""><code class="source r">dbDisconnect(con)</code></pre>
+</div>
+<p><br> <br></p>
+<hr />
+<h2 id="part-4---in-r-studio">Part 4 - In R Studio</h2>
+<p><br> <br></p>
+<h3 id="task-14">Task 14</h3>
+<h4>
+Parse the Plant Catalog XML and write an XPath query that finds all plants that grow in full shade or in full sun.
+</h4>
+<p><br></p>
+<div class="row">
+<button class="source R toggle btn btn-xs btn-primary">
+<span class="glyphicon glyphicon-chevron-down"></span> R source
+</button>
+<pre style=""><code class="source r">xml.url <- "https://amanbatra.in/static/plants.xml"
+
+
+xData <- getURL(xml.url)
+xDoc = xmlParse(xData)
+ 
+queryres <- xpathSApply(xDoc,"/CATALOG/PLANT[ LIGHT = 'Sun' or LIGHT = 'Shade']")
+queryres</code></pre>
+<button class="output R toggle btn btn-xs btn-success">
+<span class="glyphicon glyphicon-chevron-down"></span> R output
+</button>
+<pre style=""><code class="output r">## [[1]]
+## <PLANT>
+##   <COMMON>Violet, Dog-Tooth</COMMON>
+##   <BOTANICAL>Erythronium americanum</BOTANICAL>
+##   <ZONE>4</ZONE>
+##   <LIGHT>Shade</LIGHT>
+##   <PRICE>$9.04</PRICE>
+##   <AVAILABILITY>020199</AVAILABILITY>
+## </PLANT> 
+## 
+## [[2]]
+## <PLANT>
+##   <COMMON>Trout Lily</COMMON>
+##   <BOTANICAL>Erythronium americanum</BOTANICAL>
+##   <ZONE>4</ZONE>
+##   <LIGHT>Shade</LIGHT>
+##   <PRICE>$6.94</PRICE>
+##   <AVAILABILITY>032499</AVAILABILITY>
+## </PLANT> 
+## 
+## [[3]]
+## <PLANT>
+##   <COMMON>Adder's-Tongue</COMMON>
+##   <BOTANICAL>Erythronium americanum</BOTANICAL>
+##   <ZONE>4</ZONE>
+##   <LIGHT>Shade</LIGHT>
+##   <PRICE>$9.58</PRICE>
+##   <AVAILABILITY>041399</AVAILABILITY>
+## </PLANT> 
+## 
+## [[4]]
+## <PLANT>
+##   <COMMON>Bee Balm</COMMON>
+##   <BOTANICAL>Monarda didyma</BOTANICAL>
+##   <ZONE>4</ZONE>
+##   <LIGHT>Shade</LIGHT>
+##   <PRICE>$4.59</PRICE>
+##   <AVAILABILITY>050399</AVAILABILITY>
+## </PLANT> 
+## 
+## [[5]]
+## <PLANT>
+##   <COMMON>Bergamot</COMMON>
+##   <BOTANICAL>Monarda didyma</BOTANICAL>
+##   <ZONE>4</ZONE>
+##   <LIGHT>Shade</LIGHT>
+##   <PRICE>$7.16</PRICE>
+##   <AVAILABILITY>042799</AVAILABILITY>
+## </PLANT> 
+## 
+## [[6]]
+## <PLANT>
+##   <COMMON>Buttercup</COMMON>
+##   <BOTANICAL>Ranunculus</BOTANICAL>
+##   <ZONE>4</ZONE>
+##   <LIGHT>Shade</LIGHT>
+##   <PRICE>$2.57</PRICE>
+##   <AVAILABILITY>061099</AVAILABILITY>
+## </PLANT> 
+## 
+## [[7]]
+## <PLANT>
+##   <COMMON>Crowfoot</COMMON>
+##   <BOTANICAL>Ranunculus</BOTANICAL>
+##   <ZONE>4</ZONE>
+##   <LIGHT>Shade</LIGHT>
+##   <PRICE>$9.34</PRICE>
+##   <AVAILABILITY>040399</AVAILABILITY>
+## </PLANT> 
+## 
+## [[8]]
+## <PLANT>
+##   <COMMON>Cinquefoil</COMMON>
+##   <BOTANICAL>Potentilla</BOTANICAL>
+##   <ZONE>Annual</ZONE>
+##   <LIGHT>Shade</LIGHT>
+##   <PRICE>$7.06</PRICE>
+##   <AVAILABILITY>052599</AVAILABILITY>
+## </PLANT> 
+## 
+## [[9]]
+## <PLANT>
+##   <COMMON>Jacob's Ladder</COMMON>
+##   <BOTANICAL>Polemonium caeruleum</BOTANICAL>
+##   <ZONE>Annual</ZONE>
+##   <LIGHT>Shade</LIGHT>
+##   <PRICE>$9.26</PRICE>
+##   <AVAILABILITY>022199</AVAILABILITY>
+## </PLANT> 
+## 
+## [[10]]
+## <PLANT>
+##   <COMMON>Greek Valerian</COMMON>
+##   <BOTANICAL>Polemonium caeruleum</BOTANICAL>
+##   <ZONE>Annual</ZONE>
+##   <LIGHT>Shade</LIGHT>
+##   <PRICE>$4.36</PRICE>
+##   <AVAILABILITY>071499</AVAILABILITY>
+## </PLANT> 
+## 
+## [[11]]
+## <PLANT>
+##   <COMMON>California Poppy</COMMON>
+##   <BOTANICAL>Eschscholzia californica</BOTANICAL>
+##   <ZONE>Annual</ZONE>
+##   <LIGHT>Sun</LIGHT>
+##   <PRICE>$7.89</PRICE>
+##   <AVAILABILITY>032799</AVAILABILITY>
+## </PLANT> 
+## 
+## [[12]]
+## <PLANT>
+##   <COMMON>Snakeroot</COMMON>
+##   <BOTANICAL>Cimicifuga</BOTANICAL>
+##   <ZONE>Annual</ZONE>
+##   <LIGHT>Shade</LIGHT>
+##   <PRICE>$5.63</PRICE>
+##   <AVAILABILITY>071199</AVAILABILITY>
+## </PLANT> 
+## 
+## [[13]]
+## <PLANT>
+##   <COMMON>Cardinal Flower</COMMON>
+##   <BOTANICAL>Lobelia cardinalis</BOTANICAL>
+##   <ZONE>2</ZONE>
+##   <LIGHT>Shade</LIGHT>
+##   <PRICE>$3.02</PRICE>
+##   <AVAILABILITY>022299</AVAILABILITY>
+## </PLANT>
+</code></pre>
+</div>
+<p><br> <br></p>
+<h3 id="task-15">Task 15</h3>
+<br/>
+<h4>
+Put the result from the previous XPath query into a dataframe and then calculate the 10% trimmed mean of the prices.
+</h4>
+<p><br> <br></p>
+<div class="row">
+<button class="source R toggle btn btn-xs btn-primary">
+<span class="glyphicon glyphicon-chevron-down"></span> R source
+</button>
+<pre style=""><code class="source r">dframe<-xmlToDataFrame(queryres)
+dframe</code></pre>
+<button class="output R toggle btn btn-xs btn-success">
+<span class="glyphicon glyphicon-chevron-down"></span> R output
+</button>
+<pre style=""><code class="output r">##               COMMON                BOTANICAL   ZONE LIGHT PRICE AVAILABILITY
+## 1  Violet, Dog-Tooth   Erythronium americanum      4 Shade $9.04       020199
+## 2         Trout Lily   Erythronium americanum      4 Shade $6.94       032499
+## 3     Adder's-Tongue   Erythronium americanum      4 Shade $9.58       041399
+## 4           Bee Balm           Monarda didyma      4 Shade $4.59       050399
+## 5           Bergamot           Monarda didyma      4 Shade $7.16       042799
+## 6          Buttercup               Ranunculus      4 Shade $2.57       061099
+## 7           Crowfoot               Ranunculus      4 Shade $9.34       040399
+## 8         Cinquefoil               Potentilla Annual Shade $7.06       052599
+## 9     Jacob's Ladder     Polemonium caeruleum Annual Shade $9.26       022199
+## 10    Greek Valerian     Polemonium caeruleum Annual Shade $4.36       071499
+## 11  California Poppy Eschscholzia californica Annual   Sun $7.89       032799
+## 12         Snakeroot               Cimicifuga Annual Shade $5.63       071199
+## 13   Cardinal Flower       Lobelia cardinalis      2 Shade $3.02       022299
+</code></pre>
+<button class="source R toggle btn btn-xs btn-primary">
+<span class="glyphicon glyphicon-chevron-down"></span> R source
+</button>
+<pre style=""><code class="source r">trimmedmean <- mean(as.numeric(gsub("[\\$,]", "", dframe$PRICE)), trim=0.1)
+
+paste0("10% Trimmed mean of the prices = ", trimmedmean)</code></pre>
+<button class="output R toggle btn btn-xs btn-success">
+<span class="glyphicon glyphicon-chevron-down"></span> R output
+</button>
+<pre style=""><code class="output r">## [1] "10% Trimmed mean of the prices = 6.75363636363636"
+</code></pre>
+</div>
+<p><br></p>
+<p><br></p>
+<center>
+<h1 id="back-to-top"><a href="#">Back to Top</a></h1>
+<hr />
+</center>
+</div>
+</div>
+<div class="navbar navbar-fixed-bottom navbar-inverse">
+<div class="container">
+<div class="navbar-header">
+<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-responsive-collapse">
+<span class="icon-bar"></span> <span class="icon-bar"></span> <span class="icon-bar"></span>
+</button>
+</div>
+<div id="bottom-navbar" class="navbar-collapse collapse navbar-responsive-collapse">
+<ul class="nav navbar-nav navbar-right">
+<li class="nav">
+<p class="navbar-text">
+Toggle
+</p>
+</li>
+<li class="dropup">
+<a href="#" class="dropdown-toggle" data-toggle="dropdown">Code <b class="caret"></b></a>
+<ul class="dropdown-menu">
+<li class="dropdown-header">
+Languages
+</li>
+<li class="active">
+<a href="#" class="toggle-global source R" type="source.R">R</a>
+</li>
+<li>
+<a href="#" type="all-source" class="toggle-global">All</a>
+</li>
+</ul>
+</li>
+<li class="dropup">
+<a href="#" class="dropdown-toggle" data-toggle="dropdown">Output <b class="caret"></b></a>
+<ul class="dropdown-menu">
+<li class="dropdown-header">
+Type
+</li>
+<li class="active">
+<a href="#" class="toggle-global message" type="message">message</a>
+</li>
+<li class="active">
+<a href="#" class="toggle-global output" type="output">output</a>
+</li>
+<li>
+<a href="#" type="all-output" class="toggle-global">All</a>
+</li>
+</ul>
+</li>
+<li class="active">
+<a href="#" type="figure" class="toggle-global">Figures</a>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div id="push">
+
+</div>
+<div id="footer">
+<div class="container">
+<p class="text-muted" id="credit">
+Styled with <a href="https://github.com/jimhester/knitrBootstrap">knitrBootstrap</a>
+</p>
+</div>
+</div>
+<link rel="stylesheet" id="theme" href="https://netdna.bootstrapcdn.com/bootswatch/3.0.0/cyborg/bootstrap.min.css" media="screen"></link><link rel="stylesheet" id="highlight" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/default.min.css" media="screen"></link>
+</div>
+</body>
+</html>

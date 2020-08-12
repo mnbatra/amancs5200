@@ -58,8 +58,6 @@ xmlDocument = xmlParse(XMLData)
 r = xmlRoot(xmlDocument)
 ```
 
-<br/>
-
 ## Query 1
 
 <h4> What is the title of the book written by "Galos, Mike"? </h4>
@@ -112,6 +110,9 @@ Output from https://www.freeformatter.com/xpath-tester.html#ad-output
 
 ![Screenshot from https://www.freeformatter.com/xpath-tester.html#ad-output](https://amanbatra.in/static/img3/2.png)
 
+<br/>
+<br/>
+<br/>
 
 <br/>
 <br/>
@@ -169,6 +170,12 @@ Output from https://www.freeformatter.com/xpath-tester.html#ad-output
 
 <br/>
 <br/>
+<br/>
+<br/>
+
+<br/>
+<br/>
+
 
 ### Query 5
 
@@ -181,6 +188,7 @@ lessthanfive = xpathSApply(xmlDocument,'//book[price < 5]/title/text() | //book[
 lessthanfive
 
 ```
+NOTE: we cannot list (title, author) in that sequence because union operator preserves the order of XML ELEMENTS and XPath has no sorting functionality, so our output instead shows like (Author, Title)
 
 XPath Query(relative) :   //book[price < 5]/title/text() | //book[price < 5]/author/text()
 

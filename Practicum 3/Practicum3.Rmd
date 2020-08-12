@@ -1,0 +1,494 @@
+---
+title: "Practicum - 3"
+author: "Aman Batra"
+output:  
+  html_document:
+    df_print: paged
+    code_folding: show
+  pdf_document: default
+  html_notebook: default
+  word_document: default
+---
+
+```{r, setup, include=FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE, # show warnings
+  message = TRUE, # show messages
+  error = TRUE, # do not interrupt generation in case of errors,
+  echo = TRUE  # show R code
+)
+
+```
+
+<style type="text/css">
+
+h1.title {
+  font-size: 38px;
+  color: DarkRed;
+  text-align: center;
+    font-weight: bold;
+
+}
+h4.author {
+    font-size: 28px;
+  color: DarkRed;
+  text-align: center;
+    font-weight: bold;
+
+}
+</style>
+
+```{r include=FALSE}
+requiredPackages = c('XML','RCurl','ggplot2','sqldf','DBI','RSQLite','knitrBootstrap' )
+for(p in requiredPackages){
+  if(!require(p,character.only = TRUE)) install.packages(p)
+  library(p,character.only = TRUE)
+}
+library(XML)
+library(RCurl)
+library(ggplot2)
+library(sqldf)
+library(DBI)
+library(dplyr)
+library(RSQLite)
+library(knitrBootstrap)
+
+```
+
+***
+
+<h4>
+**NUID: 001877232**<br/>
+**Class: CS5200**<br/>
+**Academic Term: Summer-2, 2020**<br/>
+**Instructor: Dr. Martin Schedlbauer**<br/>
+**Email** : [Batra.am@northeastern.edu](mailto:Batra.am@northeastern.edu)<br/>
+**Type : Individual Submission**<br/>
+**GITHUB Repository:** [Click Here](https://github.com/predictbay/amancs5200/tree/master/Practicum%20-%201%20CS5200%20-%20Contact%20Tracing%20Database)
+
+***
+
+# {.tabset}
+
+## Part 1 - In R Notebook 
+
+<br/>
+
+### Task 1
+
+<h4>Inspect the Plant Catalog XML (plants.xml).</h4>
+
+By visual inspection we can see that:
+
+1. **No internal DTD is present in the schema**, we cannot run an xml validation test, so we will preview the xml below.
+2. There are a total of 8 nodes, **"CATALOG"** is the root node and **"PLANT"** is the object node.
+3. Each instance of **"PLANT"** contains 6 nodes, **"COMMON", "BOTANICAL", "ZONE", "LIGHT", "PRICE"**, and **"AVAILABILITY"**.
+
+
+
+```{r}
+
+
+xml.url <- "https://amanbatra.in/static/plants.xml"
+XMLData <- getURL(xml.url)
+xmlDocument = xmlParse(XMLData)
+xmlDocument
+
+```
+
+### Task 2
+
+<h4> Load the Plant Catalog XML directly into a dataframe using xmlToDataFrame.</h4>
+
+```{r}
+
+# Checking if the XML file exists in the directory or not, if not, it will be downloaded automatically via host
+
+if(file.exists("plants.xml")==FALSE) {
+download.file("https://amanbatra.in/static/plants.xml","./plants.xml")
+}
+# load data into dataframe from XMLData file
+xmldf = xmlToDataFrame("plants.xml")
+xmldf
+
+
+```
+
+<br/>
+
+<br/>
+
+### Task 3
+
+<h4>Create a new column retail that is a numeric column and has the data from the price column; note that the price column is text and contains a leading '$' and needs to be parsed properly.</h4>
+
+<br/>
+
+```{r}
+# Extracting numeric prices from PRICE column and replacing the dollar sign with null.
+
+RETAIL=as.numeric(gsub("[\\$,]", "", xmldf$PRICE))
+
+# Adding a data column for prices without the Dollar sign in them, using the cbind method to bind a column, using if else to prevent double the operation, if column already present
+# checking output for the upda  ted data frame
+
+if("RETAIL" %in% colnames(xmldf))
+{
+xmldf;
+} else {
+xmldf=cbind(xmldf,RETAIL);
+xmldf;
+}
+
+```
+
+<br/>
+<br/>
+
+### Task 4
+
+<h4>Remove the original price column (the one that is text) from the dataframe.</h4>
+
+```{r}
+
+# Passing all unwanted column names into a new variable
+
+unwantedcol <- "PRICE"
+
+# Performing self update, checking if column exists and dataframe and deleting it, the second way is commented out
+
+xmldf <- xmldf[, ! names(xmldf) %in% unwantedcol, drop = F]
+
+# xmldf<- within(xmldf,rm(PRICE))
+# output the final dataframe
+xmldf
+
+```
+
+<br/>
+<br/>
+
+### Task 5
+
+<h4>Update all prices: increase them by 4.25%.</h4>
+
+```{r}
+
+# 4.25 % increase is equal to 104.25 % of the original value which can be written as (104.25/100)*Original Value or 1.0425*Original Value in short, the second way is commented out.
+
+xmldf$RETAIL=xmldf$RETAIL*1.0425
+
+# xmldf$RETAIL = xmldf$RETAIL  + (4.25/100)*xmldf$RETAIL
+# output only prices columns
+
+xmldf$RETAIL
+
+# output the final dataframe
+xmldf
+
+
+
+
+```
+
+<br/>
+<br/>
+
+### Task 6
+
+<h4>Create a histogram of the number of plants by price. Adorn the chart -- do some research on what you can do.</h4>
+
+```{r}
+
+# Making a histgram without any external libraries
+
+pricelist <- xmldf$RETAIL
+
+
+pricehist<- hist(pricelist,
+main="Histogram for plant prices in the catalog",
+xlab="Prices in dollars ($) ",
+xlim=c(0,12),
+ylab="Frequency Of Prices",
+ylim=c(0,12),
+col=c("darkgreen","blue","grey","black"),
+border="yellow",
+freq=TRUE,
+breaks=10
+)
+
+text(pricehist$mids,pricehist$counts,labels=pricehist$counts, adj=c(0.5, -0.5))
+  
+
+# Making a histogram with ggplot2 (THIS SECTION IS OPTIONAL)
+
+require(ggplot2)
+
+set.seed(1L)
+binwidth <- 1
+start_bin <- binwidth * floor(min(pricelist) / binwidth)
+# compute breaks and bin the data
+breaks <- seq(start_bin, max(pricelist) + binwidth, by = binwidth)
+pricelist2 <- cut(sort(pricelist), breaks = breaks, by = binwidth)
+
+ggplot() + geom_col(aes(x = head(breaks, -1L), 
+                        y = as.integer(table(pricelist2)), 
+                        fill = levels(pricelist2))) +
+  ylab("Plant count") + xlab("Price List")
+
+
+
+```
+
+<br/>
+<br/>
+
+
+### Task 7
+
+<h4>Using sqldf create a SQL query that finds the common names of all plants that cost less than $8 and grow in Sunny light</h4>
+
+```{r}
+
+queryxmldf <- sqldf("select COMMON from xmldf where RETAIL<8 and LIGHT='Sunny'")
+
+queryxmldf
+
+
+
+```
+<br/>
+<br/>
+
+### Task 8
+
+<h4>Using either sqldf or dataframe functions, how many plants grow in full shade?</h4>
+
+```{r}
+
+# SELECT count of plants where light = SHADE
+
+plantcountxmldf <- sqldf("select count(*) as 'Total plants that grow in full shade' from xmldf where LIGHT='Shade'")
+
+plantcountxmldf
+
+```
+
+<br/>
+<br/>
+
+
+### Task 9
+
+<h4>Write the dataframe to a new table in a new SQLite database using the dbWriteTable function.</h4>
+
+```{r}
+# Initializing an empty database and then using dbWriteTable to write the table to empty database
+# We will check using both dbReadTable and SQLite inspect, to see if the newly created table exists or not
+
+sqldbfile <- "catalog.db"
+
+if (file.exists(sqldbfile)==TRUE) {
+  file.remove(sqldbfile)}
+
+
+
+con <- dbConnect(RSQLite::SQLite(), "catalog.db")
+dbWriteTable(con,
+             "catalog",
+             xmldf,
+             overwrite = TRUE,
+             header = TRUE,
+             temporary = FALSE)
+
+#first check via dbReadTable
+dbReadTable(con, "catalog")
+dbDisconnect(con)
+
+```
+
+
+<br/>
+<br/>
+
+***
+
+## Part 2 - In SQLite
+
+<br/>
+<br/>
+
+### Task 1
+<br/>
+
+
+<h4> Inspect the database created in (9) above. Is the table there? What is its name? Are the columns correct?</h4>
+<br/>
+
+The table is there in the SQLite database, and it can be seen in the image below in the list of tables,  the new table was given the name ‘catalog’ in Task 9, and it can be clearly seen in the SQLite database.
+
+<br/>
+
+
+![Table Name Visible in SQLite DB](https://amanbatra.in/static/img3/sqlite1.png)
+<br/>
+<br/>
+
+The name of the table is ‘catalog’
+The columns 'COMMON', 'BOTANICAL', 'ZONE', 'LIGHT', 'AVAILABILITY', and 'RETAIL' were present in our dataframe in Task 5, and they can be clearly seen in the screenshot given above
+
+The 36 records can be seen in the table contents:
+
+<br/>
+
+![](https://amanbatra.in/static/img3/sqlite2.png)
+
+<br/>
+<br/>
+
+### Task 2
+<br/>
+<h4> Write a SQL UPDATE statement that decreases all prices by 0.75%. </h4>
+<br/>
+
+SQL Statement: 'UPDATE catalog SET RETAIL=RETAIL-(0.0075*RETAIL);'
+
+#### Execution screenshots from SQLite DB:
+
+<br/>
+
+The image below shows the query and its successful execution in SQLite database:
+
+![](https://amanbatra.in/static/img3/sqlite4.png)
+
+<br/>
+
+The image below shows that the values in column "RETAIL" have been reduced by 0.75% 
+
+![](https://amanbatra.in/static/img3/sqlite5.png)
+<br/>
+
+The image below highlights the new values for closer inspection:
+
+
+![](https://amanbatra.in/static/img3/sqlite6.png)
+
+<br/>
+<br/>
+
+***
+
+## Part 3 -In R Studio:
+
+
+<br>
+<br/>
+
+
+### Task 1
+
+<h4> Connect to the SQLite database from above. </h4>
+
+
+```{r}
+# We are using two way connection to our SQLite database to ensure it does not go missing during execution or practicum submission
+# I check local storage first for the presence of database file "catalog.db" if for some reason, db isn't present then
+# I will load the file using my remote, the db at both place is exact same.
+
+
+if(file.exists("catalog.db")==TRUE){
+con <- dbConnect(SQLite(), dbname="catalog.db" )
+dbReadTable(con,"CATALOG")
+} else {
+  
+print("Database file catalog.db missing from root storage, downloading from remote")
+  dbfile <- tempfile(fileext=".db")
+  download.file("https://amanbatra.in/static/catalog.db", dbfile)
+  con <- dbConnect(SQLite(), dbname=dbfile )
+  dbReadTable(con,"catalog")
+}
+
+
+```
+<br>
+
+<br/>
+
+### Task 2
+
+<h4> Build and execute a SQL query that finds the number of plants by light. </h4>
+
+```{r}
+
+# The connection to SQLite database was initiated in the previous step, so we do not need to connect again
+
+# fetching the query result in local variable to store and display concurrently
+
+plantqueryres <- dbGetQuery(con, "SELECT COUNT(*) AS 'Number of plants grouped by light', LIGHT FROM catalog GROUP BY LIGHT")
+plantqueryres 
+
+dbDisconnect(con)
+
+```
+<br>
+<br>
+
+***
+
+## Part 4 - In R Studio
+
+<br>
+<br>
+
+### Task 14
+
+<h4> Parse the Plant Catalog XML and write an XPath query that finds all plants that grow in full shade or in full sun.</h4>
+
+<br>
+
+```{r}
+xml.url <- "https://amanbatra.in/static/plants.xml"
+
+
+xData <- getURL(xml.url)
+xDoc = xmlParse(xData)
+ 
+queryres <- xpathSApply(xDoc,"/CATALOG/PLANT[ LIGHT = 'Sun' or LIGHT = 'Shade']")
+queryres
+
+
+```
+<br>
+<br>
+
+### Task 15
+
+<br/>
+<h4> Put the result from the previous XPath query into a dataframe and then calculate the 10% trimmed mean of the prices. </h4>
+
+<br>
+<br>
+
+```{r}
+dframe<-xmlToDataFrame(queryres)
+dframe
+
+trimmedmean <- mean(as.numeric(gsub("[\\$,]", "", dframe$PRICE)), trim=0.1)
+
+paste0("10% Trimmed mean of the prices = ", trimmedmean)
+
+
+
+```
+<br>
+
+<br>
+
+<center>
+
+# [Back to Top ](#)
+
+***
+
+</center>
+
