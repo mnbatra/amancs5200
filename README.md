@@ -2,8 +2,10 @@
 ## [Northeastern University](https://northeastern.edu "Northeastern University"), Summer - 2020
 ### Course Instructor(s) : [Dr. Martin Schedlbauer](https://www.khoury.northeastern.edu/people/martin-schedlbauer/ "Dr. Martin Schedlbauer") 
 ### <img src="https://amanbatra.in/static/img3/dbms.png" width="350">
-### This repo is meant to serve as a datastore for my Projects and Practicums. Points to be noted =>
-1. Everything I have uploaded can be read, and reproduced in any way, but I take no guarantees of my work, 
+### This repo is meant to serve as a datastore for my Assignments, Projects and Practicums. 
+
+NOTE:
+1. I have uploaded can be read, and reproduced in any way, but I take no guarantees of my work, 
 2. I am not to be held responsible, for what you choose to do with my work.
 3. Plagiarism is not tolerated at educational institutions, make sure you are careful about it.
 
