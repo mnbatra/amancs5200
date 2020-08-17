@@ -2,11 +2,11 @@
 title: "Practicum - 3"
 author: "Aman Batra"
 output:  
+  html_notebook: default
+  pdf_document: default
   html_document:
     df_print: paged
     code_folding: show
-  pdf_document: default
-  html_notebook: default
   word_document: default
 ---
 
@@ -21,6 +21,12 @@ knitr::opts_chunk$set(
 ```
 
 <style type="text/css">
+
+.scroll-350 {
+max-height : 350px;
+overflow-y : auto;
+background-color : inherit;
+}
 
 h1.title {
   font-size: 38px;
@@ -68,7 +74,7 @@ library(knitrBootstrap)
 
 ***
 
-# {.tabset}
+# The Practicum Is Divided Into Four Parts: {.tabset}
 
 ## Part 1 - In R Notebook 
 
@@ -84,9 +90,10 @@ By visual inspection we can see that:
 2. There are a total of 8 nodes, **"CATALOG"** is the root node and **"PLANT"** is the object node.
 3. Each instance of **"PLANT"** contains 6 nodes, **"COMMON", "BOTANICAL", "ZONE", "LIGHT", "PRICE"**, and **"AVAILABILITY"**.
 
+#### Note: The result block is scrollable
 
 
-```{r}
+```{r class.output="scroll-350"}
 
 
 xml.url <- "https://amanbatra.in/static/plants.xml"
@@ -95,6 +102,7 @@ xmlDocument = xmlParse(XMLData)
 xmlDocument
 
 ```
+
 
 ### Task 2
 
@@ -234,8 +242,7 @@ pricelist2 <- cut(sort(pricelist), breaks = breaks, by = binwidth)
 ggplot() + geom_col(aes(x = head(breaks, -1L), 
                         y = as.integer(table(pricelist2)), 
                         fill = levels(pricelist2))) +
-  ylab("Plant count") + xlab("Price List")
-
+  ylab("Plant count") + xlab("Availability List")
 
 
 ```
@@ -376,6 +383,10 @@ The image below highlights the new values for closer inspection:
 <br/>
 <br/>
 
+
+
+<br/>
+
 ***
 
 ## Part 3 -In R Studio:
@@ -414,6 +425,7 @@ print("Database file catalog.db missing from root storage, downloading from remo
 
 <br/>
 
+
 ### Task 2
 
 <h4> Build and execute a SQL query that finds the number of plants by light. </h4>
@@ -446,7 +458,12 @@ dbDisconnect(con)
 
 <br>
 
-```{r}
+#### **XML Raw View**
+
+##### NOTE: The result block is scrollable
+
+
+```{r class.output="scroll-350"}
 xml.url <- "https://amanbatra.in/static/plants.xml"
 
 
@@ -458,6 +475,20 @@ queryres
 
 
 ```
+<br/>
+
+#### **Values View ( This block is optional )**
+
+```{r}
+
+valueres <- xpathSApply(xDoc,"/CATALOG/PLANT[ LIGHT = 'Sun' or LIGHT = 'Shade']",xmlValue)
+valueres
+
+
+```
+
+
+
 <br>
 <br>
 

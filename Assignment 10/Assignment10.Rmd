@@ -78,7 +78,7 @@ Installation Screenshots:
 
 <br/>
 
-Installing Mongo from Homebrew and setting default directory :
+### 1. Installing Mongo from Homebrew and setting default directory :
 
 "mongod --dbpath /users/amanbatra/desktop/Data/db"
 
@@ -86,7 +86,7 @@ Installing Mongo from Homebrew and setting default directory :
 
 <br/>
 
-Starting the Mongo DB Server
+### 2. Starting the Mongo DB Server
 
 "mongo --host localhost 27017"
 
@@ -94,14 +94,15 @@ Starting the Mongo DB Server
 
 <br/>
  
-Checking the MongoDB version
+### 3. Checking the MongoDB version
+
 "mongo --version"
 
 ![Part 3](https://amanbatra.in/static/img3/Mongo3.png)
 
 <br/>
 
-Checking the installation of MongoDB compass:
+### 4. Checking the installation of MongoDB compass:
 
 All databases have loaded correctly
 
@@ -110,7 +111,7 @@ All databases have loaded correctly
 
 <br/>
 
-## Part - 2  MongoDB in R
+## Part 2 - MongoDB in R
 
 <br/>
 
@@ -155,7 +156,7 @@ my_collection$iterate()$one()
 <br/>
 
 
-## Part - 3, Running Queries & Creating Plots
+## Part 3 - Running Queries & Creating Plots
 
 
 <br/>
@@ -328,8 +329,6 @@ Now, let’s generate plots by day and hour.
 
 
 ```{r}
-
-
 four_most_common=crimes%>%group_by(PrimaryType)%>%summarize(Count=n())%>%arrange(desc(Count))%>%head(4)
 four_most_common=four_most_common$PrimaryType
 
@@ -348,7 +347,7 @@ g = function(data){
           axis.text.x = element_text(color="blue",size=10,angle=0,hjust=.5,vjust=.5),
          axis.title.y = element_text(size=11),
          plot.title=element_text(size=12,color="purple",hjust=0.5))
-}
+    }
 
 g1=g(filter(crimes,PrimaryType=="THEFT"))+ggtitle("Theft")+ylab("Total Count")
 g2=g(filter(crimes,PrimaryType=="BATTERY"))+ggtitle("BATTERY")+ylab("Total Count")
@@ -357,12 +356,14 @@ g4=g(filter(crimes,PrimaryType=="NARCOTICS"))+ggtitle("NARCOTICS")+ylab("Total C
 grid.arrange(g1,g2,g3,g4,ncol=2)
 
 g=function(data){
-    monthCounts = as.data.frame(table(data$month))
-    ggplot(monthCounts, aes(x=Var1, y=Freq)) + geom_line(aes(group=1),size=2,color="red") + xlab("Day of the Week") + 
-    theme(axis.title.x=element_blank(),axis.text.y = element_text(color="blue",size=11,angle=0,hjust=1,vjust=0),
-          axis.text.x = element_text(color="blue",size=11,angle=0,hjust=.5,vjust=.5),
-         axis.title.y = element_text(size=14),
-         plot.title=element_text(size=16,color="purple",hjust=0.5))
+    DayHourCounts = as.data.frame(table(data$Weekday, data$Hour))
+    DayHourCounts$Hour = as.numeric(as.character(DayHourCounts$Var2))
+    ggplot(DayHourCounts, aes(x=Hour, y=Freq)) + geom_line(aes(group=Var1, color=Var1), size=1.4)+ylab("Count")+
+    theme(axis.title.x=element_text(size=14),axis.text.y = element_text(color="blue",size=11,angle=0,hjust=1,vjust=0),
+      axis.text.x = element_text(color="blue",size=11,angle=0,hjust=.5,vjust=.5),
+     axis.title.y = element_text(size=14),
+     legend.title=element_blank(),
+     plot.title=element_text(size=16,color="purple",hjust=0.5))
     }
 
 g1=g(filter(crimes,PrimaryType=="THEFT"))+ggtitle("Theft")+ylab("Total Count")
@@ -370,6 +371,7 @@ g2=g(filter(crimes,PrimaryType=="BATTERY"))+ggtitle("BATTERY")+ylab("Total Count
 g3=g(filter(crimes,PrimaryType=="CRIMINAL DAMAGE"))+ggtitle("CRIMINAL DAMAGE")+ylab("Total Count")
 g4=g(filter(crimes,PrimaryType=="NARCOTICS"))+ggtitle("NARCOTICS")+ylab("Total Count")
 grid.arrange(g1,g2,g3,g4,ncol=2)
+
 
 g=function(data){
     monthCounts = as.data.frame(table(data$month))
@@ -396,7 +398,7 @@ We can also produce maps
  
 # Register the google api key 
 
-ggmap::register_google(key = "MySecretAPIKey")
+ggmap::register_google(key = "MySecretKey")
 
 # Load a map of Chicago into R:
 
